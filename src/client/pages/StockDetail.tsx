@@ -130,35 +130,35 @@ export function StockDetail() {
     <>
       {/* Header */}
       <header className="bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-slate-200 dark:border-[#38383a] shadow-[0_1px_3px_rgba(0,0,0,0.05)] sticky top-0 z-50 pt-safe">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Link
               to="/"
-              className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
+              className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors shrink-0"
             >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M10 19l-7-7m0 0l7-7m-7 7h18" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
               </svg>
             </Link>
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-sm sm:text-xl font-bold text-slate-900 dark:text-white leading-tight truncate">
                 {formatStockName(stock)}
               </h1>
-              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] sm:text-sm font-medium text-slate-500 dark:text-slate-400">
                 {stock.market}: {stock.ticker}
               </span>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-8">
+          <div className="flex items-center gap-3 sm:gap-8 shrink-0">
             <div className="text-right">
-              <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
+              <p className="text-[9px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
                 {t('detail.cumulativeWinRate')}
               </p>
-              <p className={`text-xl sm:text-2xl font-black ${winRate >= 60 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
+              <p className={`text-base sm:text-2xl font-black ${winRate >= 60 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
                 {winRate.toFixed(1)}%
               </p>
             </div>
-            <div className="text-right border-l pl-8 border-slate-200 dark:border-[#38383a] hidden sm:block">
+            <div className="text-right border-l pl-3 sm:pl-8 border-slate-200 dark:border-[#38383a] hidden sm:block">
               <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
                 {t('detail.totalPredictions')}
               </p>
@@ -168,17 +168,17 @@ export function StockDetail() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8 animate-fade-in">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
+        <div className="space-y-3 sm:space-y-8 animate-fade-in">
           {/* LLM selector tabs */}
           {llmConfigs && llmConfigs.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
-              <span className="text-sm font-bold text-slate-500 dark:text-slate-400 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1">
+              <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 shrink-0">
                 {t('detail.llmFilter')}:
               </span>
               <button
                 onClick={() => setSelectedLLM(undefined)}
-                className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-all shrink-0 ${
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-bold rounded-lg transition-all shrink-0 ${
                   !selectedLLM
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-black'
                     : 'bg-slate-100 dark:bg-[#2c2c2e] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#3a3a3c]'
@@ -190,7 +190,7 @@ export function StockDetail() {
                 <button
                   key={config.id}
                   onClick={() => setSelectedLLM(config.id)}
-                  className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-all shrink-0 ${
+                  className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-bold rounded-lg transition-all shrink-0 ${
                     selectedLLM === config.id
                       ? 'bg-slate-900 dark:bg-white text-white dark:text-black'
                       : 'bg-slate-100 dark:bg-[#2c2c2e] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#3a3a3c]'
@@ -203,23 +203,22 @@ export function StockDetail() {
           )}
 
           {/* Charts row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
             {/* Price & Prediction Chart */}
             <Card className="lg:col-span-2">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <div className="flex justify-between items-center mb-3 sm:mb-6">
+                <h2 className="text-sm sm:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-1 sm:gap-2">
                   {t('detail.priceAndPredictions')}
-                  <span className="text-xs font-normal text-slate-400 dark:text-slate-500">
+                  <span className="text-[10px] sm:text-xs font-normal text-slate-400 dark:text-slate-500">
                     ({t('detail.last30Days')})
                   </span>
                 </h2>
-                <div className="flex gap-4 text-xs font-medium">
+                <div className="flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs font-medium">
                   {isAllLLMs && activeLLMs.length > 0 ? (
-                    // Show LLM color legend when in multi-LLM mode
                     activeLLMs.map((llm, i) => (
                       <span key={llm.id} className="flex items-center gap-1">
                         <span
-                          className="w-3 h-3 rounded-full"
+                          className="w-2 h-2 sm:w-3 sm:h-3 rounded-full shrink-0"
                           style={{ backgroundColor: LLM_COLORS[i % LLM_COLORS.length] }}
                         />
                         <span className="text-slate-600 dark:text-slate-400">{llm.name}</span>
@@ -255,7 +254,7 @@ export function StockDetail() {
 
             {/* Win Rate Evolution */}
             <Card>
-              <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6">
+              <h2 className="text-sm sm:text-lg font-bold text-slate-800 dark:text-white mb-3 sm:mb-6">
                 {t('detail.winRateEvolution')}
               </h2>
               {accuracyHistory && accuracyHistory.length > 0 ? (
@@ -286,19 +285,6 @@ export function StockDetail() {
           ) : (
             <PredictionTable ticker={ticker!} market={stock.market} llmId={selectedLLM} />
           )}
-
-          {/* Notes link */}
-          <div className="flex justify-center">
-            <Link
-              to="/notes"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-all duration-200 ease-out cursor-pointer"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              {t('notes.viewAll')}
-            </Link>
-          </div>
 
         </div>
       </main>

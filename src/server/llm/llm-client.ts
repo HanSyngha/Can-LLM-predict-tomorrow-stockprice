@@ -37,7 +37,8 @@ export class LLMClient implements LLMClientInterface {
   private client: AxiosInstance;
   private model: string;
   private providerConfig: ProviderConfig;
-  private maxRetries = 3;
+  private maxRetries = 5;
+  private maxRateLimitRetries = 8;
 
   constructor(config: LLMClientConfig) {
     this.model = config.model;
@@ -94,6 +95,7 @@ export class LLMClient implements LLMClientInterface {
     }
 
     let lastError: Error | null = null;
+    let rateLimitRetries = 0;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
@@ -109,6 +111,19 @@ export class LLMClient implements LLMClientInterface {
           );
         }
 
+        const isRateLimit = axios.isAxiosError(error) && error.response?.status === 429;
+
+        // Rate limit: special long-wait retry (up to 8 additional attempts)
+        if (isRateLimit && rateLimitRetries < this.maxRateLimitRetries) {
+          rateLimitRetries++;
+          // Progressive wait: 10s, 20s, 30s, 40s, 50s, 60s, 60s, 60s
+          const waitSec = Math.min(10 * rateLimitRetries, 60);
+          logger.warn(`Rate limited (429). Waiting ${waitSec}s before retry ${rateLimitRetries}/${this.maxRateLimitRetries}`);
+          await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+          attempt--; // Don't count rate limit retries against normal retries
+          continue;
+        }
+
         // Check for non-retryable errors (4xx except 429)
         if (axios.isAxiosError(error) && error.response) {
           const status = error.response.status;
@@ -117,7 +132,7 @@ export class LLMClient implements LLMClientInterface {
           }
         }
 
-        // Retry with exponential backoff
+        // Retry with exponential backoff for server errors
         if (attempt < this.maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
           logger.warn(`LLM request failed (attempt ${attempt}/${this.maxRetries}), retrying in ${delay}ms`, lastError.message);

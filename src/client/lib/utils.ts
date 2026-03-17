@@ -13,10 +13,6 @@ export function formatStockName(stock: { name: string; name_ko?: string | null; 
   return stock.name;
 }
 
-export function formatStockNameWithTicker(stock: { name: string; name_ko?: string | null; ticker: string; market: string }): string {
-  return `${formatStockName(stock)} [${stock.ticker}]`;
-}
-
 /**
  * Format price based on market.
  * KRW markets (KOSPI, KOSDAQ): no decimals, comma separated (e.g. 72,300)

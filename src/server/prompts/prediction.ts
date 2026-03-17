@@ -144,9 +144,18 @@ Price movements for this stock over the last 30 days:
   }
 
   prompt += `
-Perform as many searches as needed. Once you have gathered sufficient evidence, call the predict tool.
+Perform thorough research before making your prediction. Use the search tool to gather comprehensive evidence.
+Recommended research strategy:
+1. Search for recent news, earnings, and price catalysts for this stock
+2. Search for sector/industry trends and macro conditions
+3. Search for analyst opinions, institutional activity, or technical indicators
+4. Review your notes for relevant past insights
+
+Take your time - accuracy is more important than speed. Once you have gathered sufficient evidence, call the predict tool.
 The search tool accepts a query (search keywords) and a question (what you want to find out).
 You can use the read_notes tool to review all current notes at any time.
+
+IMPORTANT: Write ALL your reasoning in ENGLISH. This ensures consistency across all LLM models and reports.
 
 Prediction criteria:
 - UP: Next close will be more than +0.3% above ${lastClosePrice != null ? formatPrice(lastClosePrice) : 'last close price'}

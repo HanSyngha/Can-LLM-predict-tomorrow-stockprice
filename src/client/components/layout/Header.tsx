@@ -33,11 +33,11 @@ export function Header({ title, subtitle, showBack = false, rightContent }: Head
           )}
           {title && (
             <div className="flex flex-col min-w-0">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-tight truncate">
+              <h1 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white leading-tight truncate">
                 {title}
               </h1>
               {subtitle && (
-                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 truncate">
+                <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">
                   {subtitle}
                 </span>
               )}
@@ -45,7 +45,7 @@ export function Header({ title, subtitle, showBack = false, rightContent }: Head
           )}
           {!title && (
             <div className="flex items-center gap-2">
-              <span className="text-xl font-black text-slate-900 dark:text-white">
+              <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white">
                 {t('common.appName')}
               </span>
             </div>

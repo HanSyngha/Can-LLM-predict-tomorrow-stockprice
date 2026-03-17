@@ -11,7 +11,7 @@ export function AppShell({ children }: AppShellProps) {
       {children}
       <MobileNav />
       {/* Spacer for mobile nav + safe area */}
-      <div className="h-16 pb-safe md:hidden" />
+      <div className="h-14 pb-safe md:hidden" />
     </div>
   );
 }

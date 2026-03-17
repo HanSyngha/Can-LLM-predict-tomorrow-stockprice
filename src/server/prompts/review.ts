@@ -90,7 +90,8 @@ When you are done, call the complete tool.
 Important:
 - Slot numbers must be between 1 and 50
 - Notes are shared across all stocks — focus on general investment lessons rather than stock-specific ones
-- Write specific, actionable lessons (e.g. "Semiconductor earnings announcements cause high volatility, avoid predicting FLAT before them")`;
+- Write specific, actionable lessons (e.g. "Semiconductor earnings announcements cause high volatility, avoid predicting FLAT before them")
+- ALWAYS write notes in ENGLISH for consistency across all LLM models`;
 
   return prompt;
 }

@@ -7,15 +7,13 @@ import type {
   Note,
   AccuracyHistoryEntry,
   PaginatedResponse,
-  LLMProviderSettings,
   ScheduleSettings,
   GeneralSettings,
   StockSearchResult,
   LLMConfig,
   LLMComparisonEntry,
   DatePredictionComparison,
-  SingleLLMComparison,
-  TranslateLLMSettings,
+  SchedulerStatus,
 } from './types';
 import { ApiError } from './types';
 
@@ -58,6 +56,7 @@ export const dashboardApi = {
     );
   },
   getLLMComparison: () => request<LLMComparisonEntry[]>('/dashboard/llm-comparison'),
+  getStatus: () => request<SchedulerStatus>('/dashboard/status'),
 };
 
 // === Stocks ===
@@ -86,10 +85,6 @@ export const predictionsApi = {
   getByTicker: (ticker: string, limit = 20, offset = 0, llmId?: string) =>
     request<PaginatedResponse<Prediction>>(
       `/predictions/${ticker}?limit=${limit}&offset=${offset}${llmId ? `&llm_id=${encodeURIComponent(llmId)}` : ''}`
-    ),
-  getComparison: (ticker: string, date: string) =>
-    request<SingleLLMComparison[]>(
-      `/predictions/${ticker}/comparison?date=${encodeURIComponent(date)}`
     ),
   getAllLLMs: (ticker: string, limit = 30) =>
     request<DatePredictionComparison[]>(

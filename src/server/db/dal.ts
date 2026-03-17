@@ -26,7 +26,10 @@ export function addStock(stock: NewStock): Stock {
 }
 
 export function deactivateStock(ticker: string): void {
-  getDb().prepare('UPDATE stocks SET is_active = 0 WHERE ticker = ?').run(ticker);
+  const db = getDb();
+  db.prepare('DELETE FROM stock_prices WHERE ticker = ?').run(ticker);
+  db.prepare('DELETE FROM predictions WHERE ticker = ?').run(ticker);
+  db.prepare('DELETE FROM stocks WHERE ticker = ?').run(ticker);
 }
 
 // === Stock Prices ===
@@ -291,6 +294,8 @@ export function updateLLMConfig(id: string, updates: Partial<LLMConfig>): LLMCon
 }
 
 export function deleteLLMConfig(id: string): LLMConfig[] {
+  // Only remove the config - keep all predictions, notes, and accuracy history
+  // If this LLM is re-added later with the same ID, its historical data will be preserved
   let configs = getLLMConfigs();
   configs = configs.filter(c => c.id !== id);
   setLLMConfigs(configs);

@@ -39,13 +39,13 @@ export function StockCard({ stock }: StockCardProps) {
       <div className="p-4 sm:p-6 pl-5 sm:pl-7">
         <div className="flex items-start justify-between mb-3">
           <div className="min-w-0">
-            <h3 className="font-bold text-slate-900 dark:text-white truncate">{formatStockName(stock)}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">{formatStockName(stock)}</h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               {stock.market}: {stock.ticker}
             </p>
           </div>
           <div className="text-right shrink-0 ml-3">
-            <p className="font-bold text-slate-900 dark:text-white">
+            <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
               {formatPrice(stock.currentPrice, stock.market)}
             </p>
             <p className={`text-sm font-semibold flex items-center justify-end gap-1 ${changeRateColor(stock.changeRate)}`}>

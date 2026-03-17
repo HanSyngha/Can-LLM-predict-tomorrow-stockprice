@@ -37,6 +37,15 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    path: '/admin',
+    labelKey: 'nav.admin',
+    icon: (
+      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
     path: '/settings',
     labelKey: 'nav.settings',
     icon: (
@@ -60,21 +69,21 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-black/90 backdrop-blur-2xl border-t border-slate-200 dark:border-[#38383a] shadow-[0_-1px_3px_rgba(0,0,0,0.05)] md:hidden z-50 pb-safe">
-      <div className="flex items-center justify-around h-16">
+      <div className="flex items-center justify-around h-14">
         {navItems.map((item) => {
           const active = isActive(item.path);
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-0.5 py-2 px-4 min-h-[44px] active:scale-95 transition-all duration-200 ease-out cursor-pointer ${
+              className={`flex flex-col items-center gap-0 py-1.5 px-1.5 min-h-[40px] active:scale-95 transition-all duration-200 ease-out cursor-pointer ${
                 active
                   ? 'text-indigo-600 dark:text-indigo-400'
                   : 'text-slate-400 dark:text-slate-500'
               }`}
             >
-              {item.icon}
-              <span className="text-[10px] font-semibold">{t(item.labelKey)}</span>
+              <div className="h-5 w-5 [&>svg]:h-5 [&>svg]:w-5">{item.icon}</div>
+              <span className="text-[9px] font-semibold leading-tight">{t(item.labelKey)}</span>
             </button>
           );
         })}

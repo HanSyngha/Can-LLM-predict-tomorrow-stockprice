@@ -8,6 +8,7 @@ import { StockDetail } from './pages/StockDetail';
 import { StockAdd } from './pages/StockAdd';
 import { Settings } from './pages/Settings';
 import { Notes } from './pages/Notes';
+import { Admin } from './pages/Admin';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
               <Route path="/stock/add" element={<StockAdd />} />
               <Route path="/stock/:ticker" element={<StockDetail />} />
               <Route path="/notes" element={<Notes />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

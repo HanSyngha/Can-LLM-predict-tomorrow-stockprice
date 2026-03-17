@@ -33,6 +33,7 @@
     "dashboard": "Dashboard",
     "addStock": "Add Stock",
     "notes": "Notes",
+    "admin": "Monitor",
     "settings": "Settings"
   },
   "theme": {
@@ -206,5 +207,24 @@
     "emptyTitle": "No notes written yet",
     "emptyDescription": "Notes will be written when LLMs perform reviews.",
     "lastUpdatedBy": "Last updated by"
+  },
+  "admin": {
+    "title": "Live Monitor",
+    "subtitle": "Real-time scheduler task tracking",
+    "startedAt": "Started",
+    "autoRefresh": "Auto-refresh",
+    "progress": "Progress",
+    "running": "Running",
+    "pending": "Pending",
+    "success": "Done",
+    "failed": "Failed",
+    "stockStatus": "Status by Stock",
+    "statusRunning": "Running",
+    "statusPending": "Pending",
+    "statusSuccess": "Done",
+    "statusFailed": "Failed",
+    "noActivity": "No active tasks at the moment",
+    "avgDuration": "Avg Inference Time per Model",
+    "predictions": "runs"
   }
 }

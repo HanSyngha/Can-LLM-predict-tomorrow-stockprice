@@ -90,7 +90,7 @@ export async function runSearchAgent(request: SearchRequest): Promise<SearchResu
       tools,
       SEARCH_SYSTEM_PROMPT,
       {
-        maxIterations: 30,
+        maxIterations: 50,
         temperature: 0.3,
       }
     );

@@ -54,20 +54,20 @@ export function Dashboard() {
   return (
     <>
       <Header title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className="space-y-8 animate-fade-in">
+          <div className="space-y-4 sm:space-y-8 animate-fade-in">
             {/* Stats row */}
-            <div className="grid grid-cols-1 min-[320px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <Card className="p-3 sm:p-6 border-t-2 border-t-indigo-500">
-                <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+              <Card className="!p-2.5 sm:!p-5 border-t-2 border-t-indigo-500">
+                <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
                   {t('dashboard.overallAccuracy')}
                 </p>
-                <p className={`text-2xl sm:text-3xl font-black mt-1 ${
+                <p className={`text-lg sm:text-3xl font-black mt-0.5 sm:mt-1 ${
                   (summary?.overallAccuracy ?? 0) >= 60
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-slate-800 dark:text-white'
@@ -75,27 +75,27 @@ export function Dashboard() {
                   {summary ? `${summary.overallAccuracy.toFixed(1)}%` : '-'}
                 </p>
               </Card>
-              <Card className="p-3 sm:p-6 border-t-2 border-t-blue-500">
-                <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
+              <Card className="!p-2.5 sm:!p-5 border-t-2 border-t-blue-500">
+                <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
                   {t('dashboard.totalPredictions')}
                 </p>
-                <p className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white mt-1">
+                <p className="text-lg sm:text-3xl font-black text-slate-800 dark:text-white mt-0.5 sm:mt-1">
                   {summary?.totalPredictions ?? 0}
                 </p>
               </Card>
-              <Card className="p-3 sm:p-6 border-t-2 border-t-emerald-500">
-                <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
+              <Card className="!p-2.5 sm:!p-5 border-t-2 border-t-emerald-500">
+                <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
                   {t('dashboard.totalCorrect')}
                 </p>
-                <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                <p className="text-lg sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">
                   {summary?.totalCorrect ?? 0}
                 </p>
               </Card>
-              <Card className="p-3 sm:p-6 border-t-2 border-t-amber-500">
-                <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
+              <Card className="!p-2.5 sm:!p-5 border-t-2 border-t-amber-500">
+                <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
                   {t('dashboard.stockCount')}
                 </p>
-                <p className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white mt-1">
+                <p className="text-lg sm:text-3xl font-black text-slate-800 dark:text-white mt-0.5 sm:mt-1">
                   {summary?.stockCount ?? 0}
                 </p>
               </Card>
@@ -112,32 +112,32 @@ export function Dashboard() {
                     {t('dashboard.llmComparisonDesc')}
                   </p>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   {llmComparison.map((llm, idx) => {
                     const gradientClass = LLM_GRADIENTS[idx % LLM_GRADIENTS.length];
                     const textColorClass = LLM_TEXT_COLORS[idx % LLM_TEXT_COLORS.length];
-                    const barWidth = Math.max(llm.accuracy, 2); // minimum visible bar
+                    const barWidth = Math.max(llm.accuracy, 2);
                     return (
-                      <div key={llm.llmId} className="flex items-center gap-4">
-                        <div className="w-28 shrink-0 text-right">
-                          <p className={`text-sm font-bold ${textColorClass}`}>{llm.llmName}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500">{llm.model}</p>
+                      <div key={llm.llmId} className="flex items-center gap-2 sm:gap-4">
+                        <div className="w-20 sm:w-28 shrink-0 text-right">
+                          <p className={`text-xs sm:text-sm font-bold ${textColorClass}`}>{llm.llmName}</p>
+                          <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 hidden sm:block">{llm.model}</p>
                         </div>
                         <div className="flex-1">
-                          <div className="relative h-8 bg-slate-100 dark:bg-[#2c2c2e] rounded-full overflow-hidden">
+                          <div className="relative h-6 sm:h-8 bg-slate-100 dark:bg-[#2c2c2e] rounded-full overflow-hidden">
                             <div
                               className={`absolute left-0 top-0 h-full ${gradientClass} rounded-full transition-all duration-500 ease-out`}
                               style={{ width: `${barWidth}%` }}
                             />
-                            <div className="absolute inset-0 flex items-center px-3">
-                              <span className="text-xs font-bold text-white drop-shadow-sm">
+                            <div className="absolute inset-0 flex items-center px-2 sm:px-3">
+                              <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
                                 {llm.accuracy.toFixed(1)}%
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="w-24 shrink-0 text-right">
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <div className="w-10 sm:w-24 shrink-0 text-right">
+                          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
                             {llm.totalCorrect}/{llm.totalPredictions}
                           </span>
                         </div>
@@ -176,7 +176,7 @@ export function Dashboard() {
               </h2>
 
               {stocks && stocks.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {stocks.map((stock) => (
                     <StockCard key={stock.ticker} stock={stock} />
                   ))}

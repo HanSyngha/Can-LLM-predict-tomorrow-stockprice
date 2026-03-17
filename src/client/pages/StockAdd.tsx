@@ -64,6 +64,8 @@ export function StockAdd() {
     }
   };
 
+  const [addedTickers, setAddedTickers] = useState<Set<string>>(new Set());
+
   const handleConfirmAdd = async (result: StockSearchResult) => {
     const nameKo = koreanNameInput[result.ticker]?.trim() || null;
     setAddingTicker(result.ticker);
@@ -77,7 +79,7 @@ export function StockAdd() {
       });
       const displayName = nameKo ? `${nameKo}(${result.name})` : result.name;
       setMessage({ type: 'success', text: t('addStock.addSuccess', { name: displayName }) });
-      setTimeout(() => navigate(`/stock/${result.ticker}`), 1000);
+      setAddedTickers(prev => new Set(prev).add(result.ticker));
     } catch (err: unknown) {
       const errorBody = (err as { body?: { error?: string } })?.body;
       const msg = errorBody?.error;
@@ -101,7 +103,7 @@ export function StockAdd() {
         market: result.market,
       });
       setMessage({ type: 'success', text: t('addStock.addSuccess', { name: result.name }) });
-      setTimeout(() => navigate(`/stock/${result.ticker}`), 1000);
+      setAddedTickers(prev => new Set(prev).add(result.ticker));
     } catch (err: unknown) {
       const errorBody = (err as { body?: { error?: string } })?.body;
       const msg = errorBody?.error;
@@ -178,10 +180,10 @@ export function StockAdd() {
                       size="sm"
                       onClick={() => handleAddClick(result)}
                       loading={addingTicker === result.ticker}
-                      disabled={addingTicker !== null}
+                      disabled={addingTicker !== null || addedTickers.has(result.ticker)}
                       className="shrink-0 w-full min-[360px]:w-auto"
                     >
-                      {t('addStock.addButton')}
+                      {addedTickers.has(result.ticker) ? '✓' : t('addStock.addButton')}
                     </Button>
                   </div>
                   {/* Korean name input for KOSPI/KOSDAQ */}

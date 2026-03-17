@@ -58,15 +58,21 @@ export function LLMComparisonTable({ ticker }: LLMComparisonTableProps) {
     );
   }
 
-  // Build LLM column list from configs
-  const llmColumns = activeLLMs.length > 0
-    ? activeLLMs
-    : comparisonData.length > 0
-      ? [...new Set(comparisonData.flatMap(d => d.predictions.map(p => p.llm_id)))].map(id => ({
-          id,
-          name: comparisonData[0]!.predictions.find(p => p.llm_id === id)?.llm_name || id,
-        }))
-      : [];
+  // Build LLM column list: include all LLMs found in data (covers deleted LLMs)
+  const allLLMIds = new Set<string>();
+  const llmNameMap = new Map<string, string>();
+  for (const d of comparisonData) {
+    for (const p of d.predictions) {
+      allLLMIds.add(p.llm_id);
+      if (!llmNameMap.has(p.llm_id)) llmNameMap.set(p.llm_id, p.llm_name);
+    }
+  }
+  // Active LLMs first, then any additional LLMs from historical data
+  const activeIds = new Set(activeLLMs.map(l => l.id));
+  const llmColumns: Array<{ id: string; name: string }> = [
+    ...activeLLMs.map(l => ({ id: l.id, name: l.name })),
+    ...[...allLLMIds].filter(id => !activeIds.has(id)).map(id => ({ id, name: llmNameMap.get(id) || id })),
+  ];
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -108,16 +114,16 @@ export function LLMComparisonTable({ ticker }: LLMComparisonTableProps) {
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white dark:from-[#1c1c1e] to-transparent z-10 sm:hidden" />
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
-              <th className="px-3 sm:px-4 py-3 sticky left-0 bg-slate-50 dark:bg-[#2c2c2e] z-20">{t('table.date')}</th>
-              <th className="px-3 sm:px-4 py-3">{t('table.actual')}</th>
+            <tr className="bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs uppercase tracking-wider font-bold">
+              <th className="px-2 sm:px-4 py-2.5 sm:py-3 sticky left-0 bg-slate-50 dark:bg-[#2c2c2e] z-20">{t('table.date')}</th>
+              <th className="px-2 sm:px-4 py-2.5 sm:py-3">{t('table.actual')}</th>
               {llmColumns.map((llm, i) => (
-                <th key={'id' in llm ? llm.id : (llm as { id: string }).id} className="px-3 sm:px-4 py-3 text-center">
+                <th key={llm.id} className="px-3 sm:px-4 py-3 text-center">
                   <span
                     className="inline-block w-2 h-2 rounded-full mr-1"
                     style={{ backgroundColor: LLM_COLORS[i % LLM_COLORS.length] }}
                   />
-                  {'name' in llm ? llm.name : (llm as { name: string }).name}
+                  {llm.name}
                 </th>
               ))}
             </tr>
@@ -138,7 +144,7 @@ export function LLMComparisonTable({ ticker }: LLMComparisonTableProps) {
                   </span>
                 </td>
                 {llmColumns.map((llm) => {
-                  const llmId = 'id' in llm ? llm.id : (llm as { id: string }).id;
+                  const llmId = llm.id;
                   const cell = getCellContent(row, llmId);
                   if (!cell) {
                     return (

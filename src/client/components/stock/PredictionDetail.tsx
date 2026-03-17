@@ -77,8 +77,8 @@ export function PredictionDetail({ prediction }: PredictionDetailProps) {
 
   return (
     <tr className="bg-slate-50 dark:bg-[#1c1c1e] animate-slide-down">
-      <td className="px-4 sm:px-8 py-6" colSpan={7}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <td className="px-3 sm:px-8 py-3 sm:py-6" colSpan={7}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
           {/* LLM Reasoning */}
           <div>
             <h4 className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 mb-2 tracking-wider">
@@ -89,7 +89,7 @@ export function PredictionDetail({ prediction }: PredictionDetailProps) {
                 text={prediction.reasoning}
                 renderContent={(displayText) => (
                   <div
-                    className="text-slate-700 dark:text-slate-300 leading-relaxed border-l-4 border-slate-300 dark:border-slate-600 pl-4 custom-scrollbar max-h-60 overflow-y-auto prose-sm"
+                    className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed border-l-4 border-slate-300 dark:border-slate-600 pl-3 sm:pl-4 custom-scrollbar max-h-60 overflow-y-auto [&_p]:mt-1 [&_br+br]:hidden"
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
                   />
                 )}

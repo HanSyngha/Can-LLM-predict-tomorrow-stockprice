@@ -9,6 +9,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import * as dal from '../db/dal.js';
+import { getSchedulerStatus } from '../services/scheduler.js';
 
 export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/dashboard/summary - Overall stats (includes per-LLM)
@@ -26,6 +27,11 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/dashboard/stock-summary - Per-stock summary
   app.get('/api/dashboard/stock-summary', async () => {
     return dal.getStockSummaries();
+  });
+
+  // GET /api/dashboard/status - Real-time scheduler status
+  app.get('/api/dashboard/status', async () => {
+    return getSchedulerStatus();
   });
 
   // GET /api/dashboard/llm-comparison - Per-LLM comparison data

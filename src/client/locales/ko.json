@@ -33,6 +33,7 @@
     "dashboard": "대시보드",
     "addStock": "종목 추가",
     "notes": "노트",
+    "admin": "모니터",
     "settings": "설정"
   },
   "theme": {
@@ -206,5 +207,24 @@
     "emptyTitle": "작성된 노트가 없습니다",
     "emptyDescription": "LLM이 리뷰를 수행하면 학습 노트가 작성됩니다.",
     "lastUpdatedBy": "마지막 업데이트"
+  },
+  "admin": {
+    "title": "실시간 모니터",
+    "subtitle": "스케줄러 작업 현황 실시간 추적",
+    "startedAt": "시작",
+    "autoRefresh": "자동 갱신",
+    "progress": "진행률",
+    "running": "진행 중",
+    "pending": "대기",
+    "success": "완료",
+    "failed": "실패",
+    "stockStatus": "종목별 상태",
+    "statusRunning": "진행 중",
+    "statusPending": "대기",
+    "statusSuccess": "완료",
+    "statusFailed": "실패",
+    "noActivity": "현재 실행 중인 작업이 없습니다",
+    "avgDuration": "모델별 평균 추론 시간",
+    "predictions": "건"
   }
 }

@@ -131,7 +131,7 @@ export async function runReviewAgent(
       { role: 'system', content: updatedPrompt },
       {
         role: 'user',
-        content: '위 예측 결과를 분석하고, 교훈이 되는 내용을 노트에 작성하라. 작업이 끝나면 complete tool을 호출하라.',
+        content: 'Analyze the prediction results above and write lessons learned in the notes. Write all notes in ENGLISH for consistency. Call the complete tool when done.',
       },
       ...toolHistory,
     ];

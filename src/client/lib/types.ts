@@ -178,6 +178,33 @@ export interface GeneralSettings {
   flatThreshold: number;
 }
 
+// === Scheduler Status ===
+export interface SchedulerStatusResult {
+  ticker: string;
+  llmId: string;
+  status: 'success' | 'failed' | 'running' | 'pending';
+  direction?: string;
+  error?: string;
+  durationMs?: number;
+  searchIteration?: number;
+}
+
+export interface LLMAvgDuration {
+  totalMs: number;
+  count: number;
+  avgMs: number;
+}
+
+export interface SchedulerStatus {
+  phase: 'idle' | 'predicting' | 'reviewing';
+  currentStock: string | null;
+  currentLLM: string | null;
+  progress: { completed: number; total: number };
+  results: SchedulerStatusResult[];
+  startedAt: string | null;
+  llmAvgDurations: Record<string, LLMAvgDuration>;
+}
+
 // === API ===
 export interface PaginatedResponse<T> {
   items: T[];

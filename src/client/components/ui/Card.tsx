@@ -16,7 +16,7 @@ export function Card({ children, className = '', hoverable = false, onClick, pad
   const hoverStyles = hoverable
     ? 'hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 dark:hover:border-[#48484a] cursor-pointer transition-all duration-200 ease-out active:scale-[0.98]'
     : '';
-  const paddingStyles = padding ? 'p-6' : '';
+  const paddingStyles = padding ? 'p-3 sm:p-6' : '';
 
   return (
     <div

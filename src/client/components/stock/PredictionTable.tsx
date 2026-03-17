@@ -97,11 +97,11 @@ export function PredictionTable({ ticker, market, llmId }: PredictionTableProps)
   return (
     <section className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-slate-200 dark:border-[#38383a] overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-100 dark:border-[#2c2c2e] bg-slate-50/50 dark:bg-[#2c2c2e]/50 flex justify-between items-center">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+      <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-[#2c2c2e] bg-slate-50/50 dark:bg-[#2c2c2e]/50 flex justify-between items-center">
+        <h2 className="text-sm sm:text-lg font-bold text-slate-800 dark:text-white">
           {t('detail.predictionHistory')}
           {total > 0 && (
-            <span className="ml-2 text-sm font-normal text-slate-400">({total})</span>
+            <span className="ml-1.5 text-xs sm:text-sm font-normal text-slate-400">({total})</span>
           )}
         </h2>
         <Button variant="secondary" size="sm" onClick={exportCSV}>
@@ -116,17 +116,17 @@ export function PredictionTable({ ticker, market, llmId }: PredictionTableProps)
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white dark:from-[#1c1c1e] to-transparent z-10 sm:hidden" />
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold">
-              <th className="px-3 sm:px-6 py-4">{t('table.date')}</th>
-              <th className="px-3 sm:px-6 py-4">{t('table.prediction')}</th>
-              <th className="px-3 sm:px-6 py-4">{t('table.actual')}</th>
-              <th className="px-3 sm:px-6 py-4">{t('table.changePercent')}</th>
-              <th className="px-3 sm:px-6 py-4">{t('table.close')}</th>
-              <th className="px-3 sm:px-6 py-4 text-center">{t('table.correct')}</th>
-              <th className="px-3 sm:px-6 py-4">{t('table.insight')}</th>
+            <tr className="bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs uppercase tracking-wider font-bold">
+              <th className="px-2 sm:px-6 py-2.5 sm:py-4">{t('table.date')}</th>
+              <th className="px-2 sm:px-6 py-2.5 sm:py-4">{t('table.prediction')}</th>
+              <th className="px-2 sm:px-6 py-2.5 sm:py-4">{t('table.actual')}</th>
+              <th className="px-2 sm:px-6 py-2.5 sm:py-4">{t('table.changePercent')}</th>
+              <th className="px-2 sm:px-6 py-2.5 sm:py-4">{t('table.close')}</th>
+              <th className="px-2 sm:px-6 py-2.5 sm:py-4 text-center">{t('table.correct')}</th>
+              <th className="px-2 sm:px-6 py-2.5 sm:py-4">{t('table.insight')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-[#2c2c2e] text-sm">
+          <tbody className="divide-y divide-slate-100 dark:divide-[#2c2c2e] text-xs sm:text-sm">
             {predictions.map((pred) => (
               <React.Fragment key={pred.id}>
                 <PredictionRow

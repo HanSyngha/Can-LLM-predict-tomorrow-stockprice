@@ -21,6 +21,47 @@ let reviewLock = false;
 let predictionTask: cron.ScheduledTask | null = null;
 let reviewTask: cron.ScheduledTask | null = null;
 
+// === Real-time status tracking ===
+export interface SchedulerStatus {
+  phase: 'idle' | 'predicting' | 'reviewing';
+  currentStock: string | null;
+  currentLLM: string | null;
+  progress: { completed: number; total: number };
+  results: Array<{ ticker: string; llmId: string; status: 'success' | 'failed' | 'running' | 'pending'; direction?: string; error?: string; durationMs?: number; searchIteration?: number }>;
+  startedAt: string | null;
+  llmAvgDurations: Record<string, { totalMs: number; count: number; avgMs: number }>;
+}
+
+/** Update search iteration for a running result (called from prediction agent) */
+export function updateSearchIteration(ticker: string, llmId: string, iteration: number): void {
+  const idx = status.results.findIndex(r => r.ticker === ticker && r.llmId === llmId && r.status === 'running');
+  if (idx >= 0) status.results[idx]!.searchIteration = iteration;
+}
+
+const status: SchedulerStatus = {
+  phase: 'idle',
+  currentStock: null,
+  currentLLM: null,
+  progress: { completed: 0, total: 0 },
+  results: [],
+  startedAt: null,
+  llmAvgDurations: {},
+};
+
+export function getSchedulerStatus(): SchedulerStatus {
+  return { ...status, results: [...status.results], llmAvgDurations: { ...status.llmAvgDurations } };
+}
+
+function recordDuration(llmId: string, durationMs: number): void {
+  if (!status.llmAvgDurations[llmId]) {
+    status.llmAvgDurations[llmId] = { totalMs: 0, count: 0, avgMs: 0 };
+  }
+  const entry = status.llmAvgDurations[llmId]!;
+  entry.totalMs += durationMs;
+  entry.count++;
+  entry.avgMs = Math.round(entry.totalMs / entry.count);
+}
+
 /** Delay helper for rate limiting between LLM calls */
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -67,20 +108,58 @@ async function runPredictionCycle(): Promise<void> {
   try {
     const stocks = dal.getActiveStocks();
     const llmConfigs = dal.getActiveLLMConfigs();
+    const total = stocks.length * llmConfigs.length;
     logger.info(`Processing ${stocks.length} active stocks for prediction with ${llmConfigs.length} active LLMs`);
+
+    // Update status
+    status.phase = 'predicting';
+    status.progress = { completed: 0, total };
+    status.results = [];
+    status.startedAt = new Date().toISOString();
+
+    // Initialize pending results
+    for (const stock of stocks) {
+      for (const config of llmConfigs) {
+        status.results.push({ ticker: stock.ticker, llmId: config.id, status: 'pending' });
+      }
+    }
 
     for (const stock of stocks) {
       for (let i = 0; i < llmConfigs.length; i++) {
         const config = llmConfigs[i]!;
+        status.currentStock = stock.ticker;
+        status.currentLLM = config.id;
+
+        // Mark as running
+        const resultIdx = status.results.findIndex(r => r.ticker === stock.ticker && r.llmId === config.id);
+        if (resultIdx >= 0) status.results[resultIdx]!.status = 'running';
+
+        const startTime = Date.now();
         try {
           await runPredictionAgent(stock, config);
+          const durationMs = Date.now() - startTime;
+          if (resultIdx >= 0) {
+            status.results[resultIdx]!.status = 'success';
+            status.results[resultIdx]!.durationMs = durationMs;
+            const pred = dal.getPrediction(stock.ticker, targetDate, config.id);
+            if (pred) status.results[resultIdx]!.direction = pred.direction;
+          }
+          recordDuration(config.id, durationMs);
         } catch (error) {
+          const durationMs = Date.now() - startTime;
           logger.error(`Prediction failed for ${stock.ticker} [LLM: ${config.id}]`, error);
+          if (resultIdx >= 0) {
+            status.results[resultIdx]!.status = 'failed';
+            status.results[resultIdx]!.error = error instanceof Error ? error.message : String(error);
+            status.results[resultIdx]!.durationMs = durationMs;
+          }
         }
 
-        // Rate limit: 2-second delay between LLM calls
+        status.progress.completed++;
+
+        // Rate limit: 5-second delay between LLM calls
         if (i < llmConfigs.length - 1) {
-          await delay(2000);
+          await delay(5000);
         }
       }
     }
@@ -88,6 +167,9 @@ async function runPredictionCycle(): Promise<void> {
     logger.info('=== Prediction cycle complete ===');
   } finally {
     predictionLock = false;
+    status.phase = 'idle';
+    status.currentStock = null;
+    status.currentLLM = null;
   }
 }
 
@@ -222,9 +304,9 @@ async function runReviewCycle(): Promise<void> {
           logger.error(`Review failed for ${stock.ticker} [LLM: ${config.id}]`, error);
         }
 
-        // Rate limit: 2-second delay between LLM calls
+        // Rate limit: 5-second delay between LLM calls
         if (i < llmConfigs.length - 1) {
-          await delay(2000);
+          await delay(5000);
         }
       }
     }
@@ -244,42 +326,111 @@ async function runReviewCycle(): Promise<void> {
   }
 }
 
-/**
- * Trigger immediate prediction for a specific stock (runs all active LLMs).
- */
-export async function triggerImmediatePrediction(stock: Stock): Promise<void> {
-  logger.info(`Triggering immediate prediction for ${stock.ticker}`);
+// === Prediction Queue ===
+const predictionQueue: Stock[] = [];
+let queueProcessing = false;
+
+/** Process a single stock's predictions (used by concurrent queue). */
+async function processStockPrediction(stock: Stock): Promise<void> {
+  logger.info(`Queue: Processing ${stock.ticker}`);
 
   try {
-    // Ensure price history is available
     await ensureRecentPrices(stock, 35);
 
     const llmConfigs = dal.getActiveLLMConfigs();
-
     if (llmConfigs.length === 0) {
-      // Fallback: run with default LLM settings
       await runPredictionAgent(stock);
       return;
     }
 
-    // Run prediction for each active LLM
     for (let i = 0; i < llmConfigs.length; i++) {
       const config = llmConfigs[i]!;
-      try {
-        await runPredictionAgent(stock, config);
-      } catch (error) {
-        logger.error(`Immediate prediction failed for ${stock.ticker} [LLM: ${config.id}]`, error);
+
+      // Find or create result entry
+      let resultIdx = status.results.findIndex(r => r.ticker === stock.ticker && r.llmId === config.id);
+      if (resultIdx < 0) {
+        status.results.push({ ticker: stock.ticker, llmId: config.id, status: 'running' });
+        resultIdx = status.results.length - 1;
+      } else {
+        status.results[resultIdx]!.status = 'running';
       }
 
-      // Rate limit: 2-second delay between LLM calls
+      const startTime = Date.now();
+      try {
+        await runPredictionAgent(stock, config);
+        const durationMs = Date.now() - startTime;
+        status.results[resultIdx]!.status = 'success';
+        status.results[resultIdx]!.durationMs = durationMs;
+        const targetDate = getNextTradingDay();
+        const pred = dal.getPrediction(stock.ticker, targetDate, config.id);
+        if (pred) status.results[resultIdx]!.direction = pred.direction;
+        recordDuration(config.id, durationMs);
+      } catch (error) {
+        const durationMs = Date.now() - startTime;
+        logger.error(`Prediction failed for ${stock.ticker} [LLM: ${config.id}]`, error);
+        status.results[resultIdx]!.status = 'failed';
+        status.results[resultIdx]!.error = error instanceof Error ? error.message : String(error);
+        status.results[resultIdx]!.durationMs = durationMs;
+      }
+
+      status.progress.completed++;
+
+      // Rate limit: 5-second delay between LLM calls for the same stock
       if (i < llmConfigs.length - 1) {
-        await delay(2000);
+        await delay(5000);
       }
     }
   } catch (error) {
-    logger.error(`Immediate prediction failed for ${stock.ticker}`, error);
-    throw error;
+    logger.error(`Queue: Failed for ${stock.ticker}`, error);
   }
+}
+
+async function processQueue(): Promise<void> {
+  if (queueProcessing || predictionQueue.length === 0) return;
+  queueProcessing = true;
+
+  while (predictionQueue.length > 0) {
+    // Drain all queued stocks as a batch for concurrent processing
+    const batch = predictionQueue.splice(0, predictionQueue.length);
+    logger.info(`Queue: Processing batch of ${batch.length} stocks concurrently`);
+
+    // Update status
+    status.phase = 'predicting';
+    status.startedAt = status.startedAt || new Date().toISOString();
+
+    // Process all stocks in parallel
+    await Promise.allSettled(batch.map(stock => processStockPrediction(stock)));
+  }
+
+  queueProcessing = false;
+  status.phase = 'idle';
+  status.currentStock = null;
+  status.currentLLM = null;
+  logger.info('Queue: All immediate predictions complete');
+}
+
+/**
+ * Trigger immediate prediction for a specific stock (queued, sequential).
+ */
+export async function triggerImmediatePrediction(stock: Stock): Promise<void> {
+  logger.info(`Queuing immediate prediction for ${stock.ticker}`);
+
+  const llmConfigs = dal.getActiveLLMConfigs();
+
+  // Add pending results
+  for (const config of llmConfigs) {
+    const exists = status.results.find(r => r.ticker === stock.ticker && r.llmId === config.id);
+    if (!exists) {
+      status.results.push({ ticker: stock.ticker, llmId: config.id, status: 'pending' });
+    }
+  }
+  status.progress.total += llmConfigs.length;
+  if (!status.startedAt) status.startedAt = new Date().toISOString();
+
+  predictionQueue.push(stock);
+
+  // Start processing if not already running
+  processQueue().catch(err => logger.error('Queue processing error', err));
 }
 
 /**

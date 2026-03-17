@@ -16,6 +16,7 @@ import type { PredictionPromptContext } from '../prompts/prediction.js';
 import { runSearchAgent } from './search/search-agent.js';
 import * as dal from '../db/dal.js';
 import { ensureRecentPrices, fetchCurrentPrice } from '../services/stock-api.js';
+import { updateSearchIteration } from '../services/scheduler.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -286,6 +287,7 @@ export async function runPredictionAgent(stock: Stock, llmConfig?: LLMConfig): P
     maxIterations: 50,
     onIteration: (iteration, toolName) => {
       logger.debug(`Prediction[${stock.ticker}][${llmLabel}] iteration ${iteration}: ${toolName}`);
+      if (llmConfig) updateSearchIteration(stock.ticker, llmConfig.id, iteration);
     },
   });
 
