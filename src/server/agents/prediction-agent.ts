@@ -318,10 +318,12 @@ export async function runPredictionAgent(stock: Stock, llmConfig?: LLMConfig): P
 
   logger.info(`Prediction saved for ${stock.ticker} [LLM: ${llmLabel}]: ${direction} (${result.iterations} iterations)`);
 
-  // Auto-translate to Korean in background (non-blocking)
-  autoTranslatePrediction(prediction.id).catch(err => {
+  // Auto-translate to Korean (blocking - completes before moving to next LLM)
+  try {
+    await autoTranslatePrediction(prediction.id);
+  } catch (err) {
     logger.warn(`Auto-translate failed for ${stock.ticker}`, err);
-  });
+  }
 
   return prediction;
 }
