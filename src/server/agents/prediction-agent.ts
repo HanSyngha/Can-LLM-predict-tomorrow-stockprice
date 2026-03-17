@@ -17,6 +17,7 @@ import { runSearchAgent } from './search/search-agent.js';
 import * as dal from '../db/dal.js';
 import { ensureRecentPrices, fetchCurrentPrice } from '../services/stock-api.js';
 import { updateSearchIteration } from '../services/scheduler.js';
+import { autoTranslatePrediction } from '../services/auto-translate.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -316,6 +317,11 @@ export async function runPredictionAgent(stock: Stock, llmConfig?: LLMConfig): P
   });
 
   logger.info(`Prediction saved for ${stock.ticker} [LLM: ${llmLabel}]: ${direction} (${result.iterations} iterations)`);
+
+  // Auto-translate to Korean in background (non-blocking)
+  autoTranslatePrediction(prediction.id).catch(err => {
+    logger.warn(`Auto-translate failed for ${stock.ticker}`, err);
+  });
 
   return prediction;
 }

@@ -128,6 +128,12 @@ export function getPrediction(ticker: string, date: string, llmId?: string): Pre
   ).get(ticker, date) as Prediction | undefined;
 }
 
+export function updatePredictionTranslations(id: number, reasoningKo: string | null, searchReportsKo: string | null): void {
+  getDb().prepare(
+    'UPDATE predictions SET reasoning_ko = ?, search_reports_ko = ? WHERE id = ?'
+  ).run(reasoningKo, searchReportsKo, id);
+}
+
 export function getRecentPredictions(ticker: string, limit: number = 30, llmId?: string): Prediction[] {
   if (llmId) {
     return getDb().prepare(

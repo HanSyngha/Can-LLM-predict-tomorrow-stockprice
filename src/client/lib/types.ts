@@ -65,6 +65,8 @@ export interface Prediction {
   actual_change_rate: number | null;
   actual_close_price: number | null;
   is_correct: number | null;
+  reasoning_ko: string | null;
+  search_reports_ko: string | null;
 }
 
 // === Note ===
