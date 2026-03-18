@@ -18,45 +18,8 @@ import * as dal from '../db/dal.js';
 import { ensureRecentPrices, fetchCurrentPrice } from '../services/stock-api.js';
 import { updateSearchIteration } from '../services/scheduler.js';
 import { autoTranslatePrediction } from '../services/auto-translate.js';
+import { getNextTradingDayForMarket, getLastTradingDayForMarket } from '../utils/market-time.js';
 import { logger } from '../utils/logger.js';
-
-/**
- * Get the next upcoming trading day based on KST.
- * Before market close (15:30 KST): returns today if weekday
- * After market close: returns next weekday
- */
-function getNextTradingDay(fromDate?: Date): string {
-  const now = fromDate || new Date();
-  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
-  const d = new Date(kstMs);
-  const kstHour = d.getUTCHours();
-  const kstMinute = d.getUTCMinutes();
-
-  // After market close (15:30 KST), move to next day
-  if (kstHour > 15 || (kstHour === 15 && kstMinute >= 30)) {
-    d.setUTCDate(d.getUTCDate() + 1);
-  }
-
-  // Skip weekends
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
-    d.setUTCDate(d.getUTCDate() + 1);
-  }
-  return d.toISOString().slice(0, 10);
-}
-
-/**
- * Get the last trading day (skips weekends) on or before a given date.
- * If no date provided, calculates from today.
- */
-function getLastTradingDay(beforeDate?: Date): string {
-  const now = beforeDate || new Date();
-  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
-  const d = new Date(kstMs);
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
-    d.setUTCDate(d.getUTCDate() - 1);
-  }
-  return d.toISOString().slice(0, 10);
-}
 
 /**
  * Run the prediction agent for a given stock.
@@ -72,9 +35,9 @@ export async function runPredictionAgent(stock: Stock, llmConfig?: LLMConfig): P
   logger.info(`Prediction agent starting for ${stock.ticker} (${stock.name}) [LLM: ${llmLabel}]`);
 
   // Calculate prediction target: next trading day (skips weekends)
-  const predictionDate = getNextTradingDay();
+  const predictionDate = getNextTradingDayForMarket(stock.market);
   // Calculate last trading day for reference price
-  const lastTradingDay = getLastTradingDay();
+  const lastTradingDay = getLastTradingDayForMarket(stock.market);
 
   // Check if already predicted today (per-LLM)
   const existing = dal.getPrediction(stock.ticker, predictionDate, llmId);

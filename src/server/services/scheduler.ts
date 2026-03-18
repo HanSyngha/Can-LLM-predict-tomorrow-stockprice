@@ -14,12 +14,12 @@ import { runPredictionAgent } from '../agents/prediction-agent.js';
 import { runReviewAgent } from '../agents/review-agent.js';
 import { ensureRecentPrices, fetchTodayResult } from './stock-api.js';
 import { judgeCorrectness, determineDirection } from './accuracy.js';
+import { getNextTradingDayForMarket, getLocalDateForMarket, getMarketGroup, getMarketGroupConfigs, isTradingDay } from '../utils/market-time.js';
 import { logger } from '../utils/logger.js';
 
 let predictionLock = false;
 let reviewLock = false;
-let predictionTask: cron.ScheduledTask | null = null;
-let reviewTask: cron.ScheduledTask | null = null;
+const cronTasks: cron.ScheduledTask[] = [];
 
 // === Real-time status tracking ===
 export interface SchedulerStatus {
@@ -68,58 +68,28 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Get the next upcoming trading day based on KST.
- * At KST 00:00 (before market open): returns today if weekday
- * At KST 15:30+ (after market close): returns next weekday
- * Uses 15:30 KST as market close cutoff.
+ * Run prediction cycle for stocks in specific markets.
+ * If marketFilter is provided, only processes stocks in those markets.
  */
-function getNextTradingDay(fromDate?: Date): string {
-  const now = fromDate || new Date();
-  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
-  const d = new Date(kstMs);
-  const kstHour = d.getUTCHours();
-  const kstMinute = d.getUTCMinutes();
-
-  // After market close (15:30 KST), move to next day
-  if (kstHour > 15 || (kstHour === 15 && kstMinute >= 30)) {
-    d.setUTCDate(d.getUTCDate() + 1);
-  }
-
-  // Skip weekends
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
-    d.setUTCDate(d.getUTCDate() + 1);
-  }
-  return d.toISOString().slice(0, 10);
-}
-
-/**
- * Check if a given date string (YYYY-MM-DD) falls on a trading day (weekday).
- */
-function isTradingDay(dateStr: string): boolean {
-  const d = new Date(dateStr + 'T00:00:00Z');
-  const day = d.getUTCDay();
-  return day !== 0 && day !== 6;
-}
-
-/**
- * Run prediction cycle for all active stocks (sequential).
- * For each stock, runs predictions for ALL active LLMs with a 2-second delay between each.
- *
- * Always predicts for the next trading day regardless of current day.
- * The prediction agent itself calculates next trading day (skips weekends).
- */
-async function runPredictionCycle(): Promise<void> {
+async function runPredictionCycle(marketFilter?: string[]): Promise<void> {
   if (predictionLock || queueProcessing) {
     logger.warn('Prediction cycle or queue already running, skipping');
     return;
   }
 
   predictionLock = true;
-  const targetDate = getNextTradingDay();
-  logger.info(`=== Prediction cycle starting (target: ${targetDate}) ===`);
+  const filterLabel = marketFilter ? marketFilter.join('/') : 'ALL';
+  logger.info(`=== Prediction cycle starting (markets: ${filterLabel}) ===`);
 
   try {
-    const stocks = dal.getActiveStocks();
+    let stocks = dal.getActiveStocks();
+    if (marketFilter) {
+      stocks = stocks.filter(s => marketFilter.includes(s.market));
+    }
+    if (stocks.length === 0) {
+      logger.info('No stocks to predict for this market group');
+      return;
+    }
     const llmConfigs = dal.getActiveLLMConfigs();
     const total = stocks.length * llmConfigs.length;
     logger.info(`Processing ${stocks.length} active stocks for prediction with ${llmConfigs.length} active LLMs`);
@@ -138,6 +108,7 @@ async function runPredictionCycle(): Promise<void> {
     }
 
     for (const stock of stocks) {
+      const targetDate = getNextTradingDayForMarket(stock.market);
       for (let i = 0; i < llmConfigs.length; i++) {
         const config = llmConfigs[i]!;
         status.currentStock = stock.ticker;
@@ -193,34 +164,38 @@ async function runPredictionCycle(): Promise<void> {
  * 3. Calculate change rate vs the reference price (last close before prediction)
  * 4. Run review agent for each stock and each LLM
  */
-async function runReviewCycle(): Promise<void> {
+async function runReviewCycle(marketFilter?: string[]): Promise<void> {
   if (reviewLock) {
     logger.warn('Review cycle already running, skipping');
     return;
   }
 
   reviewLock = true;
-  logger.info('=== Review cycle starting ===');
+  const filterLabel = marketFilter ? marketFilter.join('/') : 'ALL';
+  logger.info(`=== Review cycle starting (markets: ${filterLabel}) ===`);
 
   try {
-    const stocks = dal.getActiveStocks();
+    let stocks = dal.getActiveStocks();
+    if (marketFilter) {
+      stocks = stocks.filter(s => marketFilter.includes(s.market));
+    }
     const llmConfigs = dal.getActiveLLMConfigs();
-    // Use KST date (UTC methods to avoid TZ=Asia/Seoul double-offset)
-    const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     // Get flat threshold from settings
     const generalSettings = dal.getSetting<{ flatThreshold: number }>('general');
     const flatThreshold = generalSettings?.flatThreshold ?? 0.3;
 
-    // Only process reviews on trading days
-    if (!isTradingDay(today)) {
-      logger.info(`Today (${today}) is not a trading day, skipping price resolution`);
-    } else {
-      // Step 1: Fetch today's prices and resolve predictions (for all LLMs)
-      for (const stock of stocks) {
-        try {
-          // Ensure we have today's price
-          const todayPrice = await fetchTodayResult(stock, today);
+    // Step 1: Fetch today's prices and resolve predictions per stock's market timezone
+    for (const stock of stocks) {
+      const today = getLocalDateForMarket(stock.market);
+
+      if (!isTradingDay(today)) {
+        logger.debug(`${today} is not a trading day for ${stock.ticker}, skipping`);
+        continue;
+      }
+
+      try {
+        const todayPrice = await fetchTodayResult(stock, today);
 
           if (!todayPrice || todayPrice.close_price === null || todayPrice.close_price === undefined) {
             logger.warn(`No price data for ${stock.ticker} on ${today}`);
@@ -272,19 +247,18 @@ async function runReviewCycle(): Promise<void> {
           logger.error(`Price fetch/resolve failed for ${stock.ticker}`, error);
         }
       }
-    }
 
     // Also resolve any older unresolved predictions (only past dates, never future)
     const unresolved = dal.getUnresolvedPredictions();
     for (const pred of unresolved) {
       try {
-        // Skip future predictions - they haven't happened yet
-        if (pred.prediction_date > today) continue;
+        // Skip future predictions based on the prediction's market timezone
+        const predStock = dal.getStockByTicker(pred.ticker);
+        if (!predStock) continue;
+        const predToday = getLocalDateForMarket(predStock.market);
+        if (pred.prediction_date > predToday) continue;
 
-        const stock = dal.getStockByTicker(pred.ticker);
-        if (!stock) continue;
-
-        const priceData = await fetchTodayResult(stock, pred.prediction_date);
+        const priceData = await fetchTodayResult(predStock, pred.prediction_date);
         if (!priceData || priceData.change_rate === null || priceData.change_rate === undefined) continue;
 
         const actualDir = determineDirection(priceData.change_rate, flatThreshold);
@@ -303,12 +277,13 @@ async function runReviewCycle(): Promise<void> {
 
     // Step 2: Run review agent for each stock and each LLM
     for (const stock of stocks) {
+      const stockToday = getLocalDateForMarket(stock.market);
       for (let i = 0; i < llmConfigs.length; i++) {
         const config = llmConfigs[i]!;
         try {
-          const prediction = dal.getPrediction(stock.ticker, today, config.id);
+          const prediction = dal.getPrediction(stock.ticker, stockToday, config.id);
           if (!prediction || prediction.actual_direction === null) {
-            logger.debug(`No resolved prediction for ${stock.ticker} [LLM: ${config.id}] on ${today}, skipping review`);
+            logger.debug(`No resolved prediction for ${stock.ticker} [LLM: ${config.id}] on ${stockToday}, skipping review`);
             continue;
           }
           if (prediction.direction === 'UNABLE') {
@@ -378,7 +353,7 @@ async function processStockPrediction(stock: Stock): Promise<void> {
         const durationMs = Date.now() - startTime;
         status.results[resultIdx]!.status = 'success';
         status.results[resultIdx]!.durationMs = durationMs;
-        const targetDate = getNextTradingDay();
+        const targetDate = getNextTradingDayForMarket(stock.market);
         const pred = dal.getPrediction(stock.ticker, targetDate, config.id);
         if (pred) status.results[resultIdx]!.direction = pred.direction;
         recordDuration(config.id, durationMs);
@@ -454,44 +429,49 @@ export async function triggerImmediatePrediction(stock: Stock): Promise<void> {
 }
 
 /**
- * Initialize the scheduler.
+ * Initialize the scheduler with per-market cron jobs.
  */
 export function initScheduler(): void {
-  // Get schedule settings from DB or use defaults
-  const scheduleSettings = dal.getSetting<{ predictionCron: string; reviewCron: string }>('schedule');
-  const predictionCron = scheduleSettings?.predictionCron || '0 0 * * *'; // 00:00
-  const reviewCron = scheduleSettings?.reviewCron || '0 20 * * *'; // 20:00
+  const marketGroups = getMarketGroupConfigs();
 
-  // KST 00:00 - Prediction cycle
-  predictionTask = cron.schedule(
-    predictionCron,
-    () => {
-      runPredictionCycle().catch(error => {
-        logger.error('Prediction cycle failed', error);
-      });
-    },
-    { timezone: 'Asia/Seoul' }
-  );
+  for (const group of marketGroups) {
+    // Prediction cron (UTC)
+    const predTask = cron.schedule(
+      group.predictionCronUTC,
+      () => {
+        logger.info(`Cron: Prediction cycle triggered for ${group.group} markets`);
+        runPredictionCycle(group.markets).catch(error => {
+          logger.error(`Prediction cycle failed for ${group.group}`, error);
+        });
+      },
+      { timezone: 'UTC' }
+    );
+    cronTasks.push(predTask);
 
-  // KST 20:00 - Review cycle
-  reviewTask = cron.schedule(
-    reviewCron,
-    () => {
-      runReviewCycle().catch(error => {
-        logger.error('Review cycle failed', error);
-      });
-    },
-    { timezone: 'Asia/Seoul' }
-  );
+    // Review cron (UTC)
+    const reviewTask = cron.schedule(
+      group.reviewCronUTC,
+      () => {
+        logger.info(`Cron: Review cycle triggered for ${group.group} markets`);
+        runReviewCycle(group.markets).catch(error => {
+          logger.error(`Review cycle failed for ${group.group}`, error);
+        });
+      },
+      { timezone: 'UTC' }
+    );
+    cronTasks.push(reviewTask);
 
-  logger.info(`Scheduler initialized: prediction=${predictionCron}, review=${reviewCron} (Asia/Seoul)`);
+    logger.info(`Scheduler: ${group.group} (${group.markets.join('/')}) - predict=${group.predictionCronUTC}, review=${group.reviewCronUTC} (UTC)`);
+  }
+
+  logger.info('Scheduler initialized with market-aware cron jobs');
 }
 
 /**
  * Stop the scheduler.
  */
 export function stopScheduler(): void {
-  predictionTask?.stop();
-  reviewTask?.stop();
+  cronTasks.forEach(t => t.stop());
+  cronTasks.length = 0;
   logger.info('Scheduler stopped');
 }
