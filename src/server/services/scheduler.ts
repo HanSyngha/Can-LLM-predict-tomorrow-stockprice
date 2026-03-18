@@ -393,16 +393,19 @@ async function processQueue(): Promise<void> {
   queueProcessing = true;
 
   while (predictionQueue.length > 0) {
-    // Drain all queued stocks as a batch for concurrent processing
-    const batch = predictionQueue.splice(0, predictionQueue.length);
-    logger.info(`Queue: Processing batch of ${batch.length} stocks concurrently`);
+    const stock = predictionQueue.shift()!;
+    logger.info(`Queue: Processing ${stock.ticker} (${predictionQueue.length} remaining)`);
 
     // Update status
     status.phase = 'predicting';
     status.startedAt = status.startedAt || new Date().toISOString();
 
-    // Process all stocks in parallel
-    await Promise.allSettled(batch.map(stock => processStockPrediction(stock)));
+    await processStockPrediction(stock);
+
+    // 3-second delay between stocks
+    if (predictionQueue.length > 0) {
+      await delay(3000);
+    }
   }
 
   queueProcessing = false;
