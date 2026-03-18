@@ -608,9 +608,36 @@ export function getStockSummaries(): StockSummary[] {
   const stocks = getActiveStocks();
   return stocks.map(stock => {
     const stats = getAccuracyStats(stock.ticker);
-    const lastPred = getDb().prepare(
-      'SELECT direction, is_correct, prediction_date FROM predictions WHERE ticker = ? ORDER BY prediction_date DESC LIMIT 1'
-    ).get(stock.ticker) as { direction: string; is_correct: number | null; prediction_date: string } | undefined;
+
+    // Get latest prediction date
+    const latestDate = getDb().prepare(
+      'SELECT prediction_date FROM predictions WHERE ticker = ? ORDER BY prediction_date DESC LIMIT 1'
+    ).get(stock.ticker) as { prediction_date: string } | undefined;
+
+    let lastPrediction: { direction: string; is_correct: number | null; prediction_date: string } | null = null;
+
+    if (latestDate) {
+      // Get ALL LLM predictions for that date → majority vote
+      const preds = getDb().prepare(
+        "SELECT direction, is_correct FROM predictions WHERE ticker = ? AND prediction_date = ? AND direction != 'UNABLE'"
+      ).all(stock.ticker, latestDate.prediction_date) as Array<{ direction: string; is_correct: number | null }>;
+
+      if (preds.length > 0) {
+        const counts: Record<string, number> = {};
+        for (const p of preds) {
+          counts[p.direction] = (counts[p.direction] || 0) + 1;
+        }
+        // Pick direction with most votes
+        const majorityDir = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]![0];
+        // is_correct: check if majority direction matches any resolved prediction
+        const resolved = preds.find(p => p.is_correct !== null && p.direction === majorityDir);
+        lastPrediction = {
+          direction: majorityDir,
+          is_correct: resolved?.is_correct ?? null,
+          prediction_date: latestDate.prediction_date,
+        };
+      }
+    }
 
     const latestPrice = getDb().prepare(
       'SELECT close_price, change_rate FROM stock_prices WHERE ticker = ? ORDER BY date DESC LIMIT 1'
@@ -622,11 +649,7 @@ export function getStockSummaries(): StockSummary[] {
       changeRate: latestPrice?.change_rate ?? null,
       accuracy: stats.rate,
       totalPredictions: stats.total,
-      lastPrediction: lastPred ? {
-        direction: lastPred.direction as any,
-        is_correct: lastPred.is_correct,
-        prediction_date: lastPred.prediction_date,
-      } : null,
+      lastPrediction: lastPrediction as any,
     };
   });
 }

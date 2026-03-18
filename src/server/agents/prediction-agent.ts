@@ -21,11 +21,14 @@ import { autoTranslatePrediction } from '../services/auto-translate.js';
 import { logger } from '../utils/logger.js';
 
 /**
- * Get the next trading day (skips weekends) from a given date.
- * If no date provided, calculates from today.
+ * Get the next trading day (skips weekends) based on KST date.
  */
 function getNextTradingDay(fromDate?: Date): string {
-  const d = fromDate ? new Date(fromDate.getTime()) : new Date();
+  // Always use KST (UTC+9) to determine "today"
+  const now = fromDate || new Date();
+  const kstOffset = 9 * 60 * 60 * 1000;
+  const kstDate = new Date(now.getTime() + kstOffset);
+  const d = new Date(kstDate);
   d.setDate(d.getDate() + 1);
   while (d.getDay() === 0 || d.getDay() === 6) {
     d.setDate(d.getDate() + 1);

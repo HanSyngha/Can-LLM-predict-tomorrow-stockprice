@@ -14,6 +14,12 @@ An experimental system where LLM agents predict daily stock price direction (UP/
 - **Real-time Dashboard**: iOS-style responsive UI with light/dark mode and Korean/English i18n
 - **Translation Support**: Optional translate LLM for viewing English LLM outputs in Korean
 
+## Important Notes
+
+- **Sequential Processing**: Predictions run sequentially (stock by stock, LLM by LLM) because the search sub-agent uses a single headless Chrome instance
+- **No Search API Costs**: All web research is done via headless Chrome (CDP) — no paid search APIs required. This means zero external API costs for research, but predictions take longer (~2-5 min per stock per LLM)
+- **LLM API Costs**: The only external API cost is the LLM inference itself (chat completions API)
+
 ## Architecture
 
 ```
