@@ -106,7 +106,7 @@ export function getCachedDates(ticker: string, startDate: string, endDate: strin
 
 export function createPrediction(pred: NewPrediction): Prediction {
   const stmt = getDb().prepare(`
-    INSERT INTO predictions (llm_id, ticker, prediction_date, direction, reasoning, search_queries, search_reports, tool_call_history)
+    INSERT OR REPLACE INTO predictions (llm_id, ticker, prediction_date, direction, reasoning, search_queries, search_reports, tool_call_history)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = stmt.run(

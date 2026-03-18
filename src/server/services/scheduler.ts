@@ -99,8 +99,8 @@ function isTradingDay(dateStr: string): boolean {
  * The prediction agent itself calculates next trading day (skips weekends).
  */
 async function runPredictionCycle(): Promise<void> {
-  if (predictionLock) {
-    logger.warn('Prediction cycle already running, skipping');
+  if (predictionLock || queueProcessing) {
+    logger.warn('Prediction cycle or queue already running, skipping');
     return;
   }
 
