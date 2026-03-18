@@ -46,7 +46,7 @@ function runMigrations(database: Database.Database): void {
   }
 
   // Read and execute migration files in order
-  const migrationFiles = ['001_initial_schema.sql', '002_multi_llm.sql', '003_name_ko.sql', '004_translations.sql'];
+  const migrationFiles = ['001_initial_schema.sql', '002_multi_llm.sql', '003_name_ko.sql', '004_translations.sql', '005_auto_translate.sql'];
 
   for (const file of migrationFiles) {
     const filePath = join(migrationsDir, file);
