@@ -263,10 +263,13 @@ async function runReviewCycle(): Promise<void> {
       }
     }
 
-    // Also resolve any older unresolved predictions
+    // Also resolve any older unresolved predictions (only past dates, never future)
     const unresolved = dal.getUnresolvedPredictions();
     for (const pred of unresolved) {
       try {
+        // Skip future predictions - they haven't happened yet
+        if (pred.prediction_date > today) continue;
+
         const stock = dal.getStockByTicker(pred.ticker);
         if (!stock) continue;
 
