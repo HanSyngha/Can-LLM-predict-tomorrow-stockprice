@@ -75,12 +75,41 @@ export async function runPredictionAgent(stock: Stock, llmConfig?: LLMConfig): P
 
   const isFirstPrediction = recentPredictions.length === 0;
 
+  // Fetch market index data for context
+  const INDEX_MAP: Record<string, { ticker: string; name: string }> = {
+    KOSPI: { ticker: '^KS11', name: 'KOSPI Index' },
+    KOSDAQ: { ticker: '^KQ11', name: 'KOSDAQ Index' },
+    NASDAQ: { ticker: '^IXIC', name: 'NASDAQ Composite' },
+    NYSE: { ticker: '^NYA', name: 'NYSE Composite' },
+  };
+  const indexInfo = INDEX_MAP[stock.market];
+  let indexPrices: import('../types/index.js').StockPrice[] = [];
+  if (indexInfo) {
+    indexPrices = dal.getPriceRange(indexInfo.ticker, startDate, endDate);
+    if (indexPrices.length === 0) {
+      // Try fetching index prices if not in DB
+      try {
+        const indexStock: import('../types/index.js').Stock = {
+          id: 0, ticker: indexInfo.ticker, name: indexInfo.name,
+          market: stock.market, api_source: 'YAHOO',
+          added_at: '', is_active: 0,
+        };
+        await ensureRecentPrices(indexStock, 35);
+        indexPrices = dal.getPriceRange(indexInfo.ticker, startDate, endDate);
+      } catch {
+        // Index fetch failed, continue without it
+      }
+    }
+  }
+
   const promptContext: PredictionPromptContext = {
     stock,
     currentPrice,
     accuracy: isFirstPrediction ? null : accuracy,
     recentPredictions,
     recentPrices,
+    indexPrices: indexPrices.length > 0 ? indexPrices : undefined,
+    indexName: indexInfo?.name,
     notes: dal.getAllNotes(llmId),
     isFirstPrediction,
     lastClosePrice,

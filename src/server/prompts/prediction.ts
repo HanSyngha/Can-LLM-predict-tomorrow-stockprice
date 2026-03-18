@@ -14,6 +14,8 @@ export interface PredictionPromptContext {
   accuracy: AccuracyStats | null;
   recentPredictions: Prediction[];
   recentPrices: StockPrice[];
+  indexPrices?: StockPrice[];
+  indexName?: string;
   notes: Note[];
   isFirstPrediction: boolean;
   lastClosePrice?: number | null;
@@ -22,7 +24,7 @@ export interface PredictionPromptContext {
 }
 
 export function buildPredictionSystemPrompt(ctx: PredictionPromptContext): string {
-  const { stock, currentPrice, accuracy, recentPredictions, recentPrices, notes, isFirstPrediction, lastClosePrice, lastCloseDate, targetDate } = ctx;
+  const { stock, currentPrice, accuracy, recentPredictions, recentPrices, indexPrices, indexName, notes, isFirstPrediction, lastClosePrice, lastCloseDate, targetDate } = ctx;
 
   let prompt = `You are a professional stock trader who MUST predict whether this stock will go UP, DOWN, or remain FLAT. There is no room for hesitation — you must decide.
 
@@ -116,6 +118,23 @@ Price movements for this stock over the last 30 days:
     );
 
     for (const price of sortedPrices.slice(0, 30)) {
+      const changeStr = price.change_rate !== null
+        ? `${price.change_rate >= 0 ? '+' : ''}${price.change_rate.toFixed(1)}%`
+        : '-';
+      const closeStr = price.close_price !== null ? formatPrice(price.close_price) : '-';
+      prompt += `| ${price.date} | ${changeStr} | ${closeStr} |\n`;
+    }
+  }
+
+  // Market index data
+  if (indexPrices && indexPrices.length > 0 && indexName) {
+    prompt += `
+[Market Index: ${indexName}]
+| Date | Change % | Close Price |
+|------|----------|-------------|
+`;
+    const sortedIdx = [...indexPrices].sort((a, b) => b.date.localeCompare(a.date));
+    for (const price of sortedIdx.slice(0, 30)) {
       const changeStr = price.change_rate !== null
         ? `${price.change_rate >= 0 ? '+' : ''}${price.change_rate.toFixed(1)}%`
         : '-';

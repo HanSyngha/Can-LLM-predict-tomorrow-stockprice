@@ -7,6 +7,7 @@
 
 import type { ToolHandler } from '../../types/index.js';
 import { browserClient } from './browser-client.js';
+import { logger } from '../../utils/logger.js';
 
 export function createBrowserTools(): ToolHandler[] {
   return [
@@ -28,13 +29,16 @@ export function createBrowserTools(): ToolHandler[] {
       },
       execute: async (args) => {
         const url = args.url as string;
+        logger.debug(`[Browser] navigate: ${url}`);
         const result = await browserClient.navigate(url);
         if (result.success) {
+          logger.debug(`[Browser] navigate OK: ${result.url} "${result.title?.slice(0, 50)}"`);
           return {
             success: true,
             result: `Navigated to ${result.url}\nTitle: ${result.title}`,
           };
         }
+        logger.warn(`[Browser] navigate FAIL: ${url} → ${result.title}`);
         return { success: false, error: result.title || 'Navigation failed' };
       },
     },
@@ -60,10 +64,14 @@ export function createBrowserTools(): ToolHandler[] {
         },
       },
       execute: async (args) => {
+        const script = (args.script as string).slice(0, 80);
+        logger.debug(`[Browser] execute_script: ${script}...`);
         const result = await browserClient.executeScript(args.script as string);
         if (result.success) {
+          logger.debug(`[Browser] script OK: ${result.content.length} chars`);
           return { success: true, result: result.content || '(empty result)' };
         }
+        logger.warn(`[Browser] script FAIL: ${result.content.slice(0, 100)}`);
         return { success: false, error: result.content };
       },
     },
