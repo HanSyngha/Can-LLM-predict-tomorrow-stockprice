@@ -22,16 +22,15 @@ import { logger } from '../utils/logger.js';
 
 /**
  * Get the next trading day (skips weekends) based on KST date.
+ * Uses UTC methods with manual KST offset to be timezone-independent.
  */
 function getNextTradingDay(fromDate?: Date): string {
-  // Always use KST (UTC+9) to determine "today"
   const now = fromDate || new Date();
-  const kstOffset = 9 * 60 * 60 * 1000;
-  const kstDate = new Date(now.getTime() + kstOffset);
-  const d = new Date(kstDate);
-  d.setDate(d.getDate() + 1);
-  while (d.getDay() === 0 || d.getDay() === 6) {
-    d.setDate(d.getDate() + 1);
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
+  const d = new Date(kstMs);
+  d.setUTCDate(d.getUTCDate() + 1);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+    d.setUTCDate(d.getUTCDate() + 1);
   }
   return d.toISOString().slice(0, 10);
 }
@@ -41,9 +40,11 @@ function getNextTradingDay(fromDate?: Date): string {
  * If no date provided, calculates from today.
  */
 function getLastTradingDay(beforeDate?: Date): string {
-  const d = beforeDate ? new Date(beforeDate.getTime()) : new Date();
-  while (d.getDay() === 0 || d.getDay() === 6) {
-    d.setDate(d.getDate() - 1);
+  const now = beforeDate || new Date();
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
+  const d = new Date(kstMs);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+    d.setUTCDate(d.getUTCDate() - 1);
   }
   return d.toISOString().slice(0, 10);
 }

@@ -201,7 +201,7 @@ export function updatePredictionResult(ticker: string, date: string, actual: Act
 
 export function getUnresolvedPredictions(): Prediction[] {
   return getDb().prepare(
-    'SELECT * FROM predictions WHERE actual_direction IS NULL AND direction != \'UNABLE\' ORDER BY prediction_date ASC'
+    'SELECT * FROM predictions WHERE actual_direction IS NULL AND direction != \'UNABLE\' ORDER BY prediction_date ASC LIMIT 500'
   ).all() as Prediction[];
 }
 

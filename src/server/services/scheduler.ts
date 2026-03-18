@@ -69,15 +69,15 @@ function delay(ms: number): Promise<void> {
 
 /**
  * Get the next trading day (skips weekends) based on KST date.
+ * Uses UTC methods with manual KST offset to be timezone-independent.
  */
 function getNextTradingDay(fromDate?: Date): string {
   const now = fromDate || new Date();
-  const kstOffset = 9 * 60 * 60 * 1000;
-  const kstDate = new Date(now.getTime() + kstOffset);
-  const d = new Date(kstDate);
-  d.setDate(d.getDate() + 1);
-  while (d.getDay() === 0 || d.getDay() === 6) {
-    d.setDate(d.getDate() + 1);
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
+  const d = new Date(kstMs);
+  d.setUTCDate(d.getUTCDate() + 1);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+    d.setUTCDate(d.getUTCDate() + 1);
   }
   return d.toISOString().slice(0, 10);
 }
@@ -86,8 +86,8 @@ function getNextTradingDay(fromDate?: Date): string {
  * Check if a given date string (YYYY-MM-DD) falls on a trading day (weekday).
  */
 function isTradingDay(dateStr: string): boolean {
-  const d = new Date(dateStr + 'T00:00:00');
-  const day = d.getDay();
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const day = d.getUTCDay();
   return day !== 0 && day !== 6;
 }
 
@@ -195,9 +195,8 @@ async function runReviewCycle(): Promise<void> {
   try {
     const stocks = dal.getActiveStocks();
     const llmConfigs = dal.getActiveLLMConfigs();
-    // Use KST date for consistency
-    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const today = kstNow.toISOString().slice(0, 10);
+    // Use KST date (UTC methods to avoid TZ=Asia/Seoul double-offset)
+    const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     // Get flat threshold from settings
     const generalSettings = dal.getSetting<{ flatThreshold: number }>('general');
