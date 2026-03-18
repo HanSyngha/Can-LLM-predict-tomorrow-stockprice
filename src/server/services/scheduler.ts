@@ -164,7 +164,7 @@ async function runPredictionCycle(marketFilter?: string[]): Promise<void> {
  * 3. Calculate change rate vs the reference price (last close before prediction)
  * 4. Run review agent for each stock and each LLM
  */
-async function runReviewCycle(marketFilter?: string[]): Promise<void> {
+export async function runReviewCycle(marketFilter?: string[]): Promise<void> {
   if (reviewLock) {
     logger.warn('Review cycle already running, skipping');
     return;

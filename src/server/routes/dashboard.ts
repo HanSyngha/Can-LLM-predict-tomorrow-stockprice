@@ -9,7 +9,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import * as dal from '../db/dal.js';
-import { getSchedulerStatus } from '../services/scheduler.js';
+import { getSchedulerStatus, runReviewCycle } from '../services/scheduler.js';
 
 export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/dashboard/summary - Overall stats (includes per-LLM)
@@ -32,6 +32,16 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/dashboard/status - Real-time scheduler status
   app.get('/api/dashboard/status', async () => {
     return getSchedulerStatus();
+  });
+
+  // POST /api/dashboard/trigger-review - Manually trigger review cycle
+  app.post('/api/dashboard/trigger-review', async (request, reply) => {
+    const { markets } = (request.query || {}) as { markets?: string };
+    const marketFilter = markets ? markets.split(',') : undefined;
+    runReviewCycle(marketFilter).catch(err => {
+      console.error('Manual review cycle failed', err);
+    });
+    return { success: true, message: 'Review cycle triggered' };
   });
 
   // GET /api/dashboard/llm-comparison - Per-LLM comparison data
