@@ -195,7 +195,9 @@ async function runReviewCycle(): Promise<void> {
   try {
     const stocks = dal.getActiveStocks();
     const llmConfigs = dal.getActiveLLMConfigs();
-    const today = new Date().toISOString().slice(0, 10);
+    // Use KST date for consistency
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today = kstNow.toISOString().slice(0, 10);
 
     // Get flat threshold from settings
     const generalSettings = dal.getSetting<{ flatThreshold: number }>('general');
