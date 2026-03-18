@@ -14,7 +14,7 @@ import { runPredictionAgent } from '../agents/prediction-agent.js';
 import { runReviewAgent } from '../agents/review-agent.js';
 import { ensureRecentPrices, fetchTodayResult } from './stock-api.js';
 import { judgeCorrectness, determineDirection } from './accuracy.js';
-import { getNextTradingDayForMarket, getLocalDateForMarket, getMarketGroup, getMarketGroupConfigs, isTradingDay } from '../utils/market-time.js';
+import { getNextTradingDayForMarket, getLocalDateForMarket, getMarketGroupConfigs, isTradingDay } from '../utils/market-time.js';
 import { logger } from '../utils/logger.js';
 
 let predictionLock = false;
@@ -304,12 +304,15 @@ async function runReviewCycle(marketFilter?: string[]): Promise<void> {
     }
 
     // Step 3: Record accuracy snapshot (overall and per-LLM)
+    const snapshotDate = stocks.length > 0
+      ? getLocalDateForMarket(stocks[0]!.market)
+      : new Date().toISOString().slice(0, 10);
     const overallStats = dal.getAccuracyStats();
-    dal.recordAccuracySnapshot(today, overallStats, 'overall');
+    dal.recordAccuracySnapshot(snapshotDate, overallStats, 'overall');
 
     for (const config of llmConfigs) {
       const llmStats = dal.getAccuracyStats(undefined, config.id);
-      dal.recordAccuracySnapshot(today, llmStats, config.id);
+      dal.recordAccuracySnapshot(snapshotDate, llmStats, config.id);
     }
 
     logger.info('=== Review cycle complete ===');

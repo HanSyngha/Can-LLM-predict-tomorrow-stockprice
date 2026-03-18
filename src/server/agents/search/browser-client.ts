@@ -291,40 +291,49 @@ class BrowserClient {
    * Uses CDP Page.loadEventFired instead of a fixed sleep for reliable page loading.
    */
   async navigate(url: string): Promise<{ success: boolean; url?: string; title?: string }> {
-    await this.ensureConnected();
-    try {
-      await this.cdp!.send('Page.enable');
-      await this.cdp!.send('Page.navigate', { url });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await this.ensureConnected();
+      try {
+        await this.cdp!.send('Page.enable');
+        await this.cdp!.send('Page.navigate', { url });
 
-      // Wait for page load event with timeout (not fixed sleep)
-      await new Promise<void>((resolve) => {
-        const timeoutId = setTimeout(() => {
-          this.cdp!.off('Page.loadEventFired', handler);
-          resolve(); // Don't reject on timeout - page might be partially loaded
-        }, 15000); // 15 second timeout
+        // Wait for page load event with timeout
+        await new Promise<void>((resolve) => {
+          const timeoutId = setTimeout(() => {
+            this.cdp!.off('Page.loadEventFired', handler);
+            resolve();
+          }, 15000);
 
-        const handler = (_params: unknown) => {
-          clearTimeout(timeoutId);
-          this.cdp!.off('Page.loadEventFired', handler);
-          resolve();
+          const handler = (_params: unknown) => {
+            clearTimeout(timeoutId);
+            this.cdp!.off('Page.loadEventFired', handler);
+            resolve();
+          };
+
+          this.cdp!.on('Page.loadEventFired', handler);
+        });
+
+        await new Promise(r => setTimeout(r, 500));
+
+        const info = await this.getPageInfo();
+        return { success: true, url: info.url, title: info.title };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (attempt === 0 && (msg.includes('timeout') || msg.includes('WebSocket') || msg.includes('not connected'))) {
+          // CDP broken - restart browser and retry once
+          logger.warn(`CDP error on navigate, restarting browser: ${msg}`);
+          await this.close();
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        return {
+          success: false,
+          url: undefined,
+          title: `Error: ${msg}`,
         };
-
-        // Listen for load event
-        this.cdp!.on('Page.loadEventFired', handler);
-      });
-
-      // Small additional wait for dynamic content
-      await new Promise(r => setTimeout(r, 500));
-
-      const info = await this.getPageInfo();
-      return { success: true, url: info.url, title: info.title };
-    } catch (error) {
-      return {
-        success: false,
-        url: undefined,
-        title: `Error: ${error instanceof Error ? error.message : String(error)}`,
-      };
+      }
     }
+    return { success: false, url: undefined, title: 'Error: navigate failed after retry' };
   }
 
   /**
