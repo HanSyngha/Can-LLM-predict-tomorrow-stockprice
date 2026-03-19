@@ -252,11 +252,11 @@ export async function runReviewCycle(marketFilter?: string[]): Promise<void> {
     const unresolved = dal.getUnresolvedPredictions();
     for (const pred of unresolved) {
       try {
-        // Skip future predictions based on the prediction's market timezone
+        // Skip predictions for today or future (market hasn't closed yet)
         const predStock = dal.getStockByTicker(pred.ticker);
         if (!predStock) continue;
         const predToday = getLocalDateForMarket(predStock.market);
-        if (pred.prediction_date > predToday) continue;
+        if (pred.prediction_date >= predToday) continue;
 
         const priceData = await fetchTodayResult(predStock, pred.prediction_date);
         if (!priceData || priceData.change_rate === null || priceData.change_rate === undefined) continue;
