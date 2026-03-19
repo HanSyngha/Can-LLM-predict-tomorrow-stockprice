@@ -6,26 +6,45 @@
  */
 
 export interface MarketTimezone {
-  utcOffsetHours: number;
+  getUtcOffsetHours: () => number;  // function to handle DST
   closeHour: number;       // local hour market closes
   closeMinute: number;     // local minute market closes
   predictionCronUTC: string;  // cron expression in UTC for prediction cycle
   reviewCronUTC: string;      // cron expression in UTC for review cycle
 }
 
-const MARKET_TIMEZONES: Record<string, MarketTimezone> = {
-  // Korean markets: KST (UTC+9), close 15:30 KST
-  // Prediction: KST 00:00 = UTC 15:00 (prev day)
-  // Review: KST 20:00 = UTC 11:00
-  KOSPI:  { utcOffsetHours: 9, closeHour: 15, closeMinute: 30, predictionCronUTC: '0 15 * * *', reviewCronUTC: '0 11 * * *' },
-  KOSDAQ: { utcOffsetHours: 9, closeHour: 15, closeMinute: 30, predictionCronUTC: '0 15 * * *', reviewCronUTC: '0 11 * * *' },
+/**
+ * Determine US Eastern Time UTC offset based on DST rules.
+ * DST starts 2nd Sunday of March, ends 1st Sunday of November.
+ */
+function getUSEasternOffset(): number {
+  const now = new Date();
+  const year = now.getUTCFullYear();
 
-  // US markets: ET (UTC-5 winter / UTC-4 summer). Using UTC-5 (EST) as base.
-  // Close: 16:00 ET = 21:00 UTC
-  // Prediction: ET 08:00 = UTC 13:00 (before market open)
-  // Review: ET 19:00 = UTC 00:00 (next day) - 3 hours after close for data settlement
-  NASDAQ: { utcOffsetHours: -5, closeHour: 16, closeMinute: 0, predictionCronUTC: '0 13 * * *', reviewCronUTC: '0 0 * * *' },
-  NYSE:   { utcOffsetHours: -5, closeHour: 16, closeMinute: 0, predictionCronUTC: '0 13 * * *', reviewCronUTC: '0 0 * * *' },
+  // Find 2nd Sunday of March
+  const mar1 = new Date(Date.UTC(year, 2, 1)); // March 1
+  const marSunday = 1 + ((7 - mar1.getUTCDay()) % 7); // first Sunday
+  const dstStart = new Date(Date.UTC(year, 2, marSunday + 7, 7)); // 2nd Sunday, 2AM ET = 7AM UTC
+
+  // Find 1st Sunday of November
+  const nov1 = new Date(Date.UTC(year, 10, 1)); // November 1
+  const novSunday = 1 + ((7 - nov1.getUTCDay()) % 7);
+  const dstEnd = new Date(Date.UTC(year, 10, novSunday, 6)); // 1st Sunday, 2AM ET = 6AM UTC
+
+  return (now >= dstStart && now < dstEnd) ? -4 : -5;
+}
+
+const MARKET_TIMEZONES: Record<string, MarketTimezone> = {
+  // Korean markets: KST (UTC+9, no DST)
+  KOSPI:  { getUtcOffsetHours: () => 9, closeHour: 15, closeMinute: 30, predictionCronUTC: '0 15 * * *', reviewCronUTC: '0 11 * * *' },
+  KOSDAQ: { getUtcOffsetHours: () => 9, closeHour: 15, closeMinute: 30, predictionCronUTC: '0 15 * * *', reviewCronUTC: '0 11 * * *' },
+
+  // US markets: ET (UTC-5 EST / UTC-4 EDT, DST-aware)
+  // Cron times set conservatively to work for both EST and EDT:
+  // Prediction: UTC 12:00 = ET 07:00(EST) or 08:00(EDT) - always before 09:30 open
+  // Review: UTC 22:00 = ET 17:00(EST) or 18:00(EDT) - always after 16:00 close
+  NASDAQ: { getUtcOffsetHours: getUSEasternOffset, closeHour: 16, closeMinute: 0, predictionCronUTC: '0 12 * * *', reviewCronUTC: '0 22 * * *' },
+  NYSE:   { getUtcOffsetHours: getUSEasternOffset, closeHour: 16, closeMinute: 0, predictionCronUTC: '0 12 * * *', reviewCronUTC: '0 22 * * *' },
 };
 
 // Default to Korean market
@@ -43,7 +62,7 @@ export function getMarketTimezone(market: string): MarketTimezone {
 export function getNextTradingDayForMarket(market: string, fromDate?: Date): string {
   const tz = getMarketTimezone(market);
   const now = fromDate || new Date();
-  const localMs = now.getTime() + tz.utcOffsetHours * 60 * 60 * 1000;
+  const localMs = now.getTime() + tz.getUtcOffsetHours() * 60 * 60 * 1000;
   const d = new Date(localMs);
   const localHour = d.getUTCHours();
   const localMinute = d.getUTCMinutes();
@@ -66,7 +85,7 @@ export function getNextTradingDayForMarket(market: string, fromDate?: Date): str
 export function getLastTradingDayForMarket(market: string, fromDate?: Date): string {
   const tz = getMarketTimezone(market);
   const now = fromDate || new Date();
-  const localMs = now.getTime() + tz.utcOffsetHours * 60 * 60 * 1000;
+  const localMs = now.getTime() + tz.getUtcOffsetHours() * 60 * 60 * 1000;
   const d = new Date(localMs);
   while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
     d.setUTCDate(d.getUTCDate() - 1);
@@ -80,7 +99,7 @@ export function getLastTradingDayForMarket(market: string, fromDate?: Date): str
 export function getLocalDateForMarket(market: string, fromDate?: Date): string {
   const tz = getMarketTimezone(market);
   const now = fromDate || new Date();
-  const d = new Date(now.getTime() + tz.utcOffsetHours * 60 * 60 * 1000);
+  const d = new Date(now.getTime() + tz.getUtcOffsetHours() * 60 * 60 * 1000);
   return d.toISOString().slice(0, 10);
 }
 
@@ -113,22 +132,19 @@ export function getMarketGroupConfigs(): Array<{
   markets: string[];
   predictionCronUTC: string;
   reviewCronUTC: string;
-  utcOffsetHours: number;
 }> {
   return [
     {
       group: 'KR',
       markets: ['KOSPI', 'KOSDAQ'],
-      predictionCronUTC: '0 15 * * *',  // KST 00:00
-      reviewCronUTC: '0 11 * * *',       // KST 20:00
-      utcOffsetHours: 9,
+      predictionCronUTC: MARKET_TIMEZONES.KOSPI!.predictionCronUTC,
+      reviewCronUTC: MARKET_TIMEZONES.KOSPI!.reviewCronUTC,
     },
     {
       group: 'US',
       markets: ['NASDAQ', 'NYSE'],
-      predictionCronUTC: '0 13 * * *',  // ET 08:00
-      reviewCronUTC: '0 0 * * *',        // ET 19:00
-      utcOffsetHours: -5,
+      predictionCronUTC: MARKET_TIMEZONES.NASDAQ!.predictionCronUTC,
+      reviewCronUTC: MARKET_TIMEZONES.NASDAQ!.reviewCronUTC,
     },
   ];
 }
