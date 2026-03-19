@@ -258,8 +258,25 @@ export async function fetchTodayResult(
   date: string
 ): Promise<NewStockPrice | null> {
   const cached = dal.getPrice(stock.ticker, date);
-  if (cached && cached.close_price !== null) {
+  if (cached && cached.close_price !== null && cached.change_rate !== null && cached.change_rate !== 0) {
     return cached;
+  }
+
+  // If cached but change_rate is missing/zero, recalculate from previous day
+  if (cached && cached.close_price !== null && (cached.change_rate === null || cached.change_rate === 0)) {
+    for (let i = 1; i <= 5; i++) {
+      const checkDate = new Date(date);
+      checkDate.setDate(checkDate.getDate() - i);
+      const checkDateStr = checkDate.toISOString().slice(0, 10);
+      const prevPrice = dal.getPrice(stock.ticker, checkDateStr);
+      if (prevPrice && prevPrice.close_price !== null) {
+        const changeRate = ((cached.close_price! - prevPrice.close_price) / prevPrice.close_price) * 100;
+        const updated = { ...cached, change_rate: Math.round(changeRate * 100) / 100 };
+        dal.upsertPrice({ ticker: stock.ticker, date, close_price: cached.close_price!, change_rate: updated.change_rate });
+        return updated;
+      }
+    }
+    return cached; // Can't recalculate, return as-is
   }
 
   const current = await fetchCurrentPrice(stock);
