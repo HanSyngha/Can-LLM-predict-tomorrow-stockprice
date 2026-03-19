@@ -74,6 +74,7 @@ export interface Note {
   llm_id: string;
   slot_number: number;
   content: string | null;
+  content_ko: string | null;
   last_updated_at: string | null;
   last_updated_by: string | null;
 }

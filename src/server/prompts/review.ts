@@ -64,9 +64,7 @@ Your search agent research from yesterday:
   }
 
   prompt += `
-Based on this review, write notes about:
-- What you did well and should continue doing next time
-- What mistakes you made that you must avoid repeating
+Based on this review, extract 1-3 KEY lessons learned. Be selective — only write truly important insights.
 
 [Current Notes State 1~50]
 | Slot | Content |
@@ -82,16 +80,17 @@ Based on this review, write notes about:
   }
 
   prompt += `
-Use the edit_note tool to write or update notes by specifying a slot number and content.
-Existing content will be overwritten.
-You can write new lessons in empty slots or update existing notes.
-When you are done, call the complete tool.
+Use the edit_note tool to write or update notes.
 
-Important:
-- Slot numbers must be between 1 and 50
-- Notes are shared across all stocks — focus on general investment lessons rather than stock-specific ones
-- Write specific, actionable lessons (e.g. "Semiconductor earnings announcements cause high volatility, avoid predicting FLAT before them")
-- ALWAYS write notes in ENGLISH for consistency across all LLM models`;
+=== NOTE WRITING RULES (CRITICAL) ===
+1. Write ONLY 1-3 notes per review. Do NOT fill all slots.
+2. UPDATE FIRST: If an existing note covers a similar topic, UPDATE that slot with improved content instead of writing a new one.
+3. Only use empty slots when the lesson is genuinely new and not covered by any existing note.
+4. Each note should be a single, specific, actionable lesson.
+5. Slot numbers must be between 1 and 50.
+6. Notes are shared across all stocks — focus on general investment lessons.
+7. ALWAYS write notes in ENGLISH for consistency.
+8. When done, call the complete tool immediately. Do NOT keep writing more notes.`;
 
   return prompt;
 }

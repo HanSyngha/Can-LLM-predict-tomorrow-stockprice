@@ -12,6 +12,7 @@ import { createLLMClient, createLLMClientForConfig } from '../llm/providers.js';
 import { runIterationEngine } from '../llm/iteration-engine.js';
 import { buildReviewSystemPrompt } from '../prompts/review.js';
 import * as dal from '../db/dal.js';
+import { autoTranslateNote } from '../services/auto-translate.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -83,6 +84,11 @@ export async function runReviewAgent(
         // Write to DB immediately (per-LLM)
         const updatedBy = `REVIEW:${stock.ticker}:${prediction.prediction_date}`;
         dal.updateNote(slotNumber, content.trim(), updatedBy, llmId);
+
+        // Auto-translate note to Korean
+        autoTranslateNote(llmId, slotNumber, content.trim()).catch(err => {
+          logger.warn(`Note translation failed for slot ${slotNumber}`, err);
+        });
 
         logger.info(`Note ${slotNumber} updated by review of ${stock.ticker} [LLM: ${llmLabel}]`);
 

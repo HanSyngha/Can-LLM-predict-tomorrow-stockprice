@@ -97,3 +97,23 @@ export async function autoTranslatePrediction(predictionId: number): Promise<voi
     logger.warn(`Auto-translate failed for prediction ${predictionId}`, err);
   }
 }
+
+/**
+ * Auto-translate a note's content to Korean.
+ */
+export async function autoTranslateNote(llmId: string, slotNumber: number, content: string): Promise<void> {
+  try {
+    const client = getTranslateClient();
+    if (!client) return;
+
+    const translated = await translateText(client, content);
+    if (translated) {
+      getDb().prepare(
+        'UPDATE notes SET content_ko = ? WHERE llm_id = ? AND slot_number = ?'
+      ).run(translated, llmId, slotNumber);
+      logger.info(`Auto-translated note slot ${slotNumber} [${llmId}]`);
+    }
+  } catch (err) {
+    logger.warn(`Note translation failed for slot ${slotNumber}`, err);
+  }
+}
