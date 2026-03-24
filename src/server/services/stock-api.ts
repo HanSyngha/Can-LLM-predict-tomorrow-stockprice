@@ -7,7 +7,7 @@
  * non-English queries to tickers and verifies on Yahoo.
  */
 
-import type { Stock, NewStockPrice, TickerSearchResult } from '../types/index.js';
+import type { Stock, NewStockPrice, TickerSearchResult, ProxySettings } from '../types/index.js';
 import * as dal from '../db/dal.js';
 import * as yahoo from './yahoo-client.js';
 import { getIntradayHistory } from './yahoo-client.js';
@@ -15,6 +15,14 @@ import { LLMClient } from '../llm/llm-client.js';
 import { getProviderConfig } from '../types/provider.js';
 import type { LLMProvider } from '../types/provider.js';
 import { logger } from '../utils/logger.js';
+
+function getProxyHeaders(): Record<string, string> {
+  const ps = dal.getSetting<ProxySettings>('proxy_settings');
+  if (!ps?.serviceId) return {};
+  const headers: Record<string, string> = { 'x-service-id': ps.serviceId };
+  if (ps.deptName) headers['x-dept-name'] = ps.deptName;
+  return headers;
+}
 
 /**
  * Smart ticker search:
@@ -46,6 +54,7 @@ export async function searchTicker(query: string): Promise<TickerSearchResult[]>
       model: searchLlmConfig.model,
       provider: searchLlmConfig.provider as LLMProvider,
       providerConfig: getProviderConfig(searchLlmConfig.provider),
+      extraHeaders: getProxyHeaders(),
     });
 
     const response = await client.chatCompletion({

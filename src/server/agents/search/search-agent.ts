@@ -11,12 +11,21 @@
 import { LLMClient } from '../../llm/llm-client.js';
 import { getProviderConfig } from '../../types/provider.js';
 import type { LLMProvider } from '../../types/provider.js';
+import type { ProxySettings } from '../../types/index.js';
 import * as dal from '../../db/dal.js';
 import { browserClient } from './browser-client.js';
 import { createBrowserTools } from './browser-tools.js';
 import { SEARCH_SYSTEM_PROMPT } from './prompts.js';
 import { SearchSubAgent } from './sub-agent.js';
 import { logger } from '../../utils/logger.js';
+
+function getProxyHeaders(): Record<string, string> {
+  const ps = dal.getSetting<ProxySettings>('proxy_settings');
+  if (!ps?.serviceId) return {};
+  const headers: Record<string, string> = { 'x-service-id': ps.serviceId };
+  if (ps.deptName) headers['x-dept-name'] = ps.deptName;
+  return headers;
+}
 
 export interface SearchRequest {
   query: string;
@@ -37,14 +46,17 @@ export interface SearchResult {
 function createSearchLLMClient(): LLMClient {
   // 1. Check dedicated search_llm setting
   const searchLlm = dal.getSetting<{ provider: string; baseUrl: string; apiKey: string; model: string }>('search_llm');
-  if (searchLlm && searchLlm.baseUrl && searchLlm.apiKey && searchLlm.model) {
+  const extraHeaders = getProxyHeaders();
+
+  if (searchLlm && searchLlm.baseUrl && searchLlm.model) {
     const providerConfig = getProviderConfig(searchLlm.provider || 'other');
     return new LLMClient({
       baseUrl: searchLlm.baseUrl,
-      apiKey: searchLlm.apiKey,
+      apiKey: searchLlm.apiKey || '',
       model: searchLlm.model,
       provider: (searchLlm.provider || 'other') as LLMProvider,
       providerConfig,
+      extraHeaders,
     });
   }
 
@@ -61,6 +73,7 @@ function createSearchLLMClient(): LLMClient {
       model: target.model,
       provider: target.provider as LLMProvider,
       providerConfig,
+      extraHeaders,
     });
   }
 

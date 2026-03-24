@@ -9,8 +9,17 @@ import * as dal from '../db/dal.js';
 import { LLMClient } from '../llm/llm-client.js';
 import { getProviderConfig } from '../types/provider.js';
 import type { LLMProvider } from '../types/provider.js';
+import type { ProxySettings } from '../types/index.js';
 import { createHash } from 'crypto';
 import { logger } from '../utils/logger.js';
+
+function getProxyHeaders(): Record<string, string> {
+  const ps = dal.getSetting<ProxySettings>('proxy_settings');
+  if (!ps?.serviceId) return {};
+  const headers: Record<string, string> = { 'x-service-id': ps.serviceId };
+  if (ps.deptName) headers['x-dept-name'] = ps.deptName;
+  return headers;
+}
 
 interface TranslateLLMSettings {
   provider: string;
@@ -32,10 +41,15 @@ export async function translateRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(400).send({ error: 'Missing required fields: text, targetLang' });
     }
 
-    // Check if translate_llm is configured
-    const translateConfig = dal.getSetting<TranslateLLMSettings>('translate_llm');
-    if (!translateConfig || !translateConfig.apiKey || !translateConfig.model) {
-      return reply.status(400).send({ error: 'Translate LLM not configured' });
+    // Check if translate_llm is configured, fallback to first active LLM
+    let translateConfig = dal.getSetting<TranslateLLMSettings>('translate_llm');
+    if (!translateConfig?.model) {
+      const configs = dal.getLLMConfigs();
+      const first = configs.find(c => c.isActive) || configs[0];
+      if (!first) {
+        return reply.status(400).send({ error: 'No LLM configured' });
+      }
+      translateConfig = { provider: first.provider, baseUrl: first.baseUrl, apiKey: first.apiKey, model: first.model };
     }
 
     // Check cache first
@@ -51,10 +65,11 @@ export async function translateRoutes(app: FastifyInstance): Promise<void> {
 
     const client = new LLMClient({
       baseUrl: translateConfig.baseUrl || providerConfig.defaultBaseUrl,
-      apiKey: translateConfig.apiKey,
+      apiKey: translateConfig.apiKey || '',
       model: translateConfig.model,
       provider: translateConfig.provider as LLMProvider,
       providerConfig,
+      extraHeaders: getProxyHeaders(),
     });
 
     try {
