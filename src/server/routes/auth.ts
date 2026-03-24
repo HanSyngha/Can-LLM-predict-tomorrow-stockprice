@@ -165,6 +165,29 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
+  // GET /api/auth/today-visitors - Today's unique visitor count (KST)
+  app.get('/api/auth/today-visitors', async (request) => {
+    // KST = UTC+9
+    const now = new Date();
+    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const todayKST = kst.toISOString().slice(0, 10); // YYYY-MM-DD in KST
+    // access_logs.created_at is stored in UTC, so convert KST day boundaries to UTC
+    const startUTC = new Date(`${todayKST}T00:00:00+09:00`).toISOString().slice(0, 19).replace('T', ' ');
+    const endUTC = new Date(`${todayKST}T23:59:59+09:00`).toISOString().slice(0, 19).replace('T', ' ');
+
+    const row = getDb().prepare(
+      'SELECT COUNT(DISTINCT loginid) as count FROM access_logs WHERE created_at BETWEEN ? AND ?'
+    ).get(startUTC, endUTC) as { count: number };
+
+    const visitors = getDb().prepare(
+      `SELECT loginid, MIN(created_at) as first_visit, MAX(created_at) as last_visit, COUNT(*) as page_views
+       FROM access_logs WHERE created_at BETWEEN ? AND ?
+       GROUP BY loginid ORDER BY first_visit DESC`
+    ).all(startUTC, endUTC);
+
+    return { date: todayKST, uniqueVisitors: row.count, visitors };
+  });
+
   // GET /api/auth/logs - Access logs (admin only)
   app.get('/api/auth/logs', async (request, reply) => {
     const user = extractUser(request);

@@ -67,7 +67,8 @@
     "llmComparison": "LLM 비교",
     "llmComparisonDesc": "활성 LLM들의 정확도 비교",
     "llmAccuracy": "LLM별 정확도",
-    "noLLMData": "아직 LLM 비교 데이터가 없습니다"
+    "noLLMData": "아직 LLM 비교 데이터가 없습니다",
+    "todayVisitors": "오늘 방문자"
   },
   "stock": {
     "price": "현재가",

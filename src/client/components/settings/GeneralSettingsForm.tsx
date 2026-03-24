@@ -11,7 +11,7 @@ export function GeneralSettingsForm() {
 
   const [schedule, setSchedule] = useState<ScheduleSettings>({
     predictionCron: '0 8 * * 1-5',
-    reviewCron: '0 18 * * 1-5',
+    reviewCron: '0 16 * * 1-5',
   });
   const [general, setGeneral] = useState<GeneralSettings>({
     flatThreshold: 0.3,

@@ -67,7 +67,8 @@
     "llmComparison": "LLM Comparison",
     "llmComparisonDesc": "Accuracy comparison across all active LLMs",
     "llmAccuracy": "LLM Accuracy",
-    "noLLMData": "No LLM comparison data yet"
+    "noLLMData": "No LLM comparison data yet",
+    "todayVisitors": "Today's Visitors"
   },
   "stock": {
     "price": "Current Price",

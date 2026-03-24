@@ -7,6 +7,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { AccuracyLineChart } from '../components/charts/AccuracyLineChart';
 import { StockCard } from '../components/stock/StockCard';
 import { useI18n } from '../contexts/I18nContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { dashboardApi, stocksApi } from '../lib/api';
 import type { DashboardSummary, StockSummary, AccuracyHistoryEntry, LLMComparisonEntry } from '../lib/types';
@@ -37,9 +38,16 @@ function StatValue({ configKey, summary }: { configKey: string; summary: Dashboa
   }
 }
 
+interface TodayVisitors {
+  date: string;
+  uniqueVisitors: number;
+  visitors: Array<{ loginid: string; first_visit: string; last_visit: string; page_views: number }>;
+}
+
 export function Dashboard() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data: summary, loading: summaryLoading } = useApi<DashboardSummary>(
     () => dashboardApi.getSummary(), []
@@ -52,6 +60,12 @@ export function Dashboard() {
   );
   const { data: llmComparison } = useApi<LLMComparisonEntry[]>(
     () => dashboardApi.getLLMComparison(), []
+  );
+  const { data: todayVisitors } = useApi<TodayVisitors>(
+    () => fetch('/api/auth/today-visitors', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('stock_evolving_token') || ''}` },
+    }).then(r => r.json()),
+    []
   );
 
   const loading = summaryLoading || stocksLoading;
@@ -77,8 +91,8 @@ export function Dashboard() {
             </div>
 
             {/* Stats row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {STAT_CONFIGS.map((stat, idx) => (
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+              {STAT_CONFIGS.map((stat) => (
                 <Card key={stat.key} className="!p-4 sm:!p-5 group relative overflow-hidden">
                   <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${stat.gradient}`} />
                   <div className="flex items-start justify-between">
@@ -104,6 +118,25 @@ export function Dashboard() {
                   </div>
                 </Card>
               ))}
+              {/* Today's visitors card */}
+              <Card className="!p-4 sm:!p-5 group relative overflow-hidden col-span-2 lg:col-span-1">
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-pink-500 to-rose-500" />
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                      {t('dashboard.todayVisitors')}
+                    </p>
+                    <p className="text-xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                      {todayVisitors?.uniqueVisitors ?? 0}
+                    </p>
+                  </div>
+                  <div className="w-9 h-9 rounded-xl bg-pink-500/10 dark:bg-pink-500/20 flex items-center justify-center shrink-0">
+                    <svg className="w-4.5 h-4.5 text-pink-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </Card>
             </div>
 
             {/* LLM Comparison Section */}
