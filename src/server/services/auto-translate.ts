@@ -20,8 +20,17 @@ interface TranslateLLMSettings {
 }
 
 function getTranslateClient(): LLMClient | null {
-  // 1) translate_llm 설정이 있으면 그걸 사용
-  const config = dal.getSetting<TranslateLLMSettings>('translate_llm');
+  const config = dal.getSetting<TranslateLLMSettings & { llmId?: string }>('translate_llm');
+
+  // 1) llmId로 선택된 LLM config 사용 (드롭다운 선택)
+  if (config?.llmId) {
+    const llmConfig = dal.getLLMConfig(config.llmId);
+    if (llmConfig) {
+      return createLLMClientForConfig(llmConfig);
+    }
+  }
+
+  // 2) 직접 입력된 설정이 있으면 사용
   if (config?.model) {
     const providerConfig = getProviderConfig(config.provider || 'other');
     return new LLMClient({
@@ -34,11 +43,10 @@ function getTranslateClient(): LLMClient | null {
     });
   }
 
-  // 2) 없으면 첫 번째 활성 LLM config를 번역용으로 사용 (사내망 fallback)
+  // 3) fallback: 첫 번째 활성 LLM
   const llmConfigs = dal.getLLMConfigs();
   const first = llmConfigs.find(c => c.isActive) || llmConfigs[0];
   if (first) {
-    logger.info(`Translate LLM not configured, falling back to first LLM: ${first.id}`);
     return createLLMClientForConfig(first);
   }
 

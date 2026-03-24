@@ -33,14 +33,21 @@ export async function translateRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(400).send({ error: 'Missing required fields: text, targetLang' });
     }
 
-    // Check if translate_llm is configured, fallback to first active LLM
-    let translateConfig = dal.getSetting<TranslateLLMSettings>('translate_llm');
-    if (!translateConfig?.model) {
+    // Resolve translate LLM: llmId 선택 > 직접 입력 > 첫 번째 활성 LLM
+    const savedConfig = dal.getSetting<TranslateLLMSettings & { llmId?: string }>('translate_llm');
+    let translateConfig: TranslateLLMSettings | null = null;
+
+    if (savedConfig?.llmId) {
+      const llm = dal.getLLMConfig(savedConfig.llmId);
+      if (llm) translateConfig = { provider: llm.provider, baseUrl: llm.baseUrl, apiKey: llm.apiKey, model: llm.model };
+    }
+    if (!translateConfig && savedConfig?.model) {
+      translateConfig = savedConfig;
+    }
+    if (!translateConfig) {
       const configs = dal.getLLMConfigs();
       const first = configs.find(c => c.isActive) || configs[0];
-      if (!first) {
-        return reply.status(400).send({ error: 'No LLM configured' });
-      }
+      if (!first) return reply.status(400).send({ error: 'No LLM configured' });
       translateConfig = { provider: first.provider, baseUrl: first.baseUrl, apiKey: first.apiKey, model: first.model };
     }
 
