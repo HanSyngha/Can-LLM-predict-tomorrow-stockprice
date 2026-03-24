@@ -303,16 +303,21 @@ export async function runReviewCycle(marketFilter?: string[]): Promise<void> {
       }
     }
 
-    // Step 3: Record accuracy snapshot (overall and per-LLM)
+    // Step 3: Record accuracy snapshot (overall and per-LLM) — skip non-trading days
     const snapshotDate = stocks.length > 0
       ? getLocalDateForMarket(stocks[0]!.market)
       : new Date().toISOString().slice(0, 10);
-    const overallStats = dal.getAccuracyStats();
-    dal.recordAccuracySnapshot(snapshotDate, overallStats, 'overall');
 
-    for (const config of llmConfigs) {
-      const llmStats = dal.getAccuracyStats(undefined, config.id);
-      dal.recordAccuracySnapshot(snapshotDate, llmStats, config.id);
+    if (isTradingDay(snapshotDate)) {
+      const overallStats = dal.getAccuracyStats();
+      dal.recordAccuracySnapshot(snapshotDate, overallStats, 'overall');
+
+      for (const config of llmConfigs) {
+        const llmStats = dal.getAccuracyStats(undefined, config.id);
+        dal.recordAccuracySnapshot(snapshotDate, llmStats, config.id);
+      }
+    } else {
+      logger.debug(`Skipping accuracy snapshot on non-trading day ${snapshotDate}`);
     }
 
     logger.info('=== Review cycle complete ===');

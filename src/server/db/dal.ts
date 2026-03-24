@@ -4,7 +4,7 @@ import type {
   Prediction, NewPrediction, ActualResult,
   Note, AccuracyHistoryEntry, AccuracyStats,
   StockSummary, DashboardSummary, LLMConfig,
-  LLMAccuracySummary,
+  LLMAccuracySummary, IntradayPrediction,
 } from '../types/index.js';
 
 // === Stocks ===
@@ -369,18 +369,21 @@ export function recordAccuracySnapshot(date: string, stats: AccuracyStats, llmId
 }
 
 export function getAccuracyHistory(limit?: number, llmId?: string): AccuracyHistoryEntry[] {
+  // Exclude weekends (strftime %w: 0=Sun, 6=Sat)
+  const weekdayFilter = "strftime('%w', date) NOT IN ('0','6')";
+
   if (llmId) {
     const sql = limit
-      ? 'SELECT * FROM accuracy_history WHERE llm_id = ? ORDER BY date DESC LIMIT ?'
-      : 'SELECT * FROM accuracy_history WHERE llm_id = ? ORDER BY date ASC';
+      ? `SELECT * FROM accuracy_history WHERE llm_id = ? AND ${weekdayFilter} ORDER BY date DESC LIMIT ?`
+      : `SELECT * FROM accuracy_history WHERE llm_id = ? AND ${weekdayFilter} ORDER BY date ASC`;
     return (limit
       ? getDb().prepare(sql).all(llmId, limit)
       : getDb().prepare(sql).all(llmId)) as AccuracyHistoryEntry[];
   }
 
   const sql = limit
-    ? 'SELECT * FROM accuracy_history ORDER BY date DESC LIMIT ?'
-    : 'SELECT * FROM accuracy_history ORDER BY date ASC';
+    ? `SELECT * FROM accuracy_history WHERE ${weekdayFilter} ORDER BY date DESC LIMIT ?`
+    : `SELECT * FROM accuracy_history WHERE ${weekdayFilter} ORDER BY date ASC`;
   return (limit
     ? getDb().prepare(sql).all(limit)
     : getDb().prepare(sql).all()) as AccuracyHistoryEntry[];
@@ -652,4 +655,244 @@ export function getStockSummaries(): StockSummary[] {
       lastPrediction: lastPrediction as any,
     };
   });
+}
+
+// === Intraday DAL Functions ===
+
+export function upsertIntradayPrices(prices: Array<{ ticker: string; datetime: string; price: number | null; volume?: number | null }>): void {
+  const stmt = getDb().prepare(`
+    INSERT INTO intraday_prices (ticker, datetime, price, volume)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(ticker, datetime) DO UPDATE SET
+      price = excluded.price,
+      volume = excluded.volume,
+      fetched_at = datetime('now')
+  `);
+  const insertAll = getDb().transaction(() => {
+    for (const p of prices) {
+      stmt.run(p.ticker, p.datetime, p.price, p.volume ?? null);
+    }
+  });
+  insertAll();
+}
+
+export function getRecentIntradayPrices(ticker: string, limit: number = 100): Array<{ id: number; ticker: string; datetime: string; price: number | null; volume: number | null; fetched_at: string }> {
+  return getDb().prepare(
+    'SELECT * FROM intraday_prices WHERE ticker = ? ORDER BY datetime DESC LIMIT ?'
+  ).all(ticker, limit) as Array<{ id: number; ticker: string; datetime: string; price: number | null; volume: number | null; fetched_at: string }>;
+}
+
+export function getFilteredIntradayPrices(ticker: string, market: string, limit: number = 100): Array<{ datetime: string; price: number | null }> {
+  // For KOSPI/KOSDAQ: prices at :00 (top of hour)
+  // For NASDAQ: prices at :30
+  const minuteFilter = (market === 'KOSPI' || market === 'KOSDAQ') ? '00' : '30';
+  return getDb().prepare(`
+    SELECT datetime, price FROM intraday_prices
+    WHERE ticker = ? AND substr(datetime, 15, 2) = ?
+    ORDER BY datetime DESC LIMIT ?
+  `).all(ticker, minuteFilter, limit) as Array<{ datetime: string; price: number | null }>;
+}
+
+export function createIntradayPrediction(pred: {
+  llm_id: string; ticker: string; prediction_date: string;
+  prediction_hour: number; prediction_minute: number;
+  target_hour: number; target_minute: number;
+  direction: string; reference_price?: number | null;
+  reasoning?: string | null; search_queries?: string | null;
+  search_reports?: string | null; tool_call_history?: string | null;
+}): void {
+  getDb().prepare(`
+    INSERT OR REPLACE INTO intraday_predictions
+    (llm_id, ticker, prediction_date, prediction_hour, prediction_minute,
+     target_hour, target_minute, direction, reference_price,
+     reasoning, search_queries, search_reports, tool_call_history)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    pred.llm_id, pred.ticker, pred.prediction_date,
+    pred.prediction_hour, pred.prediction_minute,
+    pred.target_hour, pred.target_minute,
+    pred.direction, pred.reference_price ?? null,
+    pred.reasoning ?? null, pred.search_queries ?? null,
+    pred.search_reports ?? null, pred.tool_call_history ?? null
+  );
+}
+
+export function getIntradayPrediction(
+  ticker: string, date: string, hour: number, minute: number, llmId: string
+): IntradayPrediction | undefined {
+  return getDb().prepare(`
+    SELECT * FROM intraday_predictions
+    WHERE ticker = ? AND prediction_date = ? AND prediction_hour = ? AND prediction_minute = ? AND llm_id = ?
+  `).get(ticker, date, hour, minute, llmId) as IntradayPrediction | undefined;
+}
+
+export function getIntradayPredictionsForDate(
+  ticker: string, date: string, llmId?: string
+): IntradayPrediction[] {
+  if (llmId) {
+    return getDb().prepare(
+      'SELECT * FROM intraday_predictions WHERE ticker = ? AND prediction_date = ? AND llm_id = ? ORDER BY prediction_hour, prediction_minute'
+    ).all(ticker, date, llmId) as IntradayPrediction[];
+  }
+  return getDb().prepare(
+    'SELECT * FROM intraday_predictions WHERE ticker = ? AND prediction_date = ? ORDER BY prediction_hour, prediction_minute'
+  ).all(ticker, date) as IntradayPrediction[];
+}
+
+export function getAllIntradayPredictionsForDate(date: string): IntradayPrediction[] {
+  return getDb().prepare(
+    'SELECT * FROM intraday_predictions WHERE prediction_date = ? ORDER BY ticker, prediction_hour, prediction_minute'
+  ).all(date) as IntradayPrediction[];
+}
+
+export function getUnresolvedIntradayPredictions(ticker: string, date?: string): IntradayPrediction[] {
+  if (date) {
+    return getDb().prepare(`
+      SELECT * FROM intraday_predictions
+      WHERE ticker = ? AND prediction_date = ? AND actual_direction IS NULL AND direction != 'UNABLE'
+      ORDER BY prediction_date, prediction_hour, prediction_minute
+    `).all(ticker, date) as IntradayPrediction[];
+  }
+  return getDb().prepare(`
+    SELECT * FROM intraday_predictions
+    WHERE ticker = ? AND actual_direction IS NULL AND direction != 'UNABLE'
+    ORDER BY prediction_date, prediction_hour, prediction_minute
+  `).all(ticker) as IntradayPrediction[];
+}
+
+export function updateIntradayPredictionResult(
+  id: number,
+  actual: { actual_direction: string; actual_change_rate: number; actual_price: number; is_correct: number | null }
+): void {
+  getDb().prepare(`
+    UPDATE intraday_predictions
+    SET actual_direction = ?, actual_change_rate = ?, actual_price = ?, is_correct = ?
+    WHERE id = ?
+  `).run(actual.actual_direction, actual.actual_change_rate, actual.actual_price, actual.is_correct, id);
+}
+
+export function getIntradayAccuracyStats(ticker?: string, llmId?: string): AccuracyStats {
+  let where = "WHERE direction != 'UNABLE'";
+  const params: unknown[] = [];
+  if (ticker) { where += ' AND ticker = ?'; params.push(ticker); }
+  if (llmId) { where += ' AND llm_id = ?'; params.push(llmId); }
+
+  const row = getDb().prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct,
+      SUM(CASE WHEN is_correct = 0 THEN 1 ELSE 0 END) as incorrect
+    FROM intraday_predictions
+    ${where} AND actual_direction IS NOT NULL
+  `).get(...params) as { total: number; correct: number; incorrect: number };
+
+  let unableWhere = "WHERE direction = 'UNABLE'";
+  const unableParams: unknown[] = [];
+  if (ticker) { unableWhere += ' AND ticker = ?'; unableParams.push(ticker); }
+  if (llmId) { unableWhere += ' AND llm_id = ?'; unableParams.push(llmId); }
+
+  const unable = getDb().prepare(
+    `SELECT COUNT(*) as count FROM intraday_predictions ${unableWhere}`
+  ).get(...unableParams) as { count: number };
+
+  return {
+    total: row.total,
+    correct: row.correct ?? 0,
+    incorrect: row.incorrect ?? 0,
+    unable: unable.count,
+    rate: row.total > 0 ? (row.correct / row.total) * 100 : 0,
+  };
+}
+
+export function recordIntradayAccuracySnapshot(date: string, stats: AccuracyStats, llmId: string = 'overall'): void {
+  getDb().prepare(`
+    INSERT INTO intraday_accuracy_history (date, total_predictions, total_correct, accuracy_rate, llm_id)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(date, llm_id) DO UPDATE SET
+      total_predictions = excluded.total_predictions,
+      total_correct = excluded.total_correct,
+      accuracy_rate = excluded.accuracy_rate,
+      recorded_at = datetime('now')
+  `).run(date, stats.total, stats.correct, stats.rate, llmId);
+}
+
+export function getIntradayAccuracyHistory(limit?: number, llmId?: string): AccuracyHistoryEntry[] {
+  const weekdayFilter = "strftime('%w', date) NOT IN ('0','6')";
+  if (llmId) {
+    const sql = limit
+      ? `SELECT * FROM intraday_accuracy_history WHERE llm_id = ? AND ${weekdayFilter} ORDER BY date DESC LIMIT ?`
+      : `SELECT * FROM intraday_accuracy_history WHERE llm_id = ? AND ${weekdayFilter} ORDER BY date ASC`;
+    return (limit
+      ? getDb().prepare(sql).all(llmId, limit)
+      : getDb().prepare(sql).all(llmId)) as AccuracyHistoryEntry[];
+  }
+  const sql = limit
+    ? `SELECT * FROM intraday_accuracy_history WHERE ${weekdayFilter} ORDER BY date DESC LIMIT ?`
+    : `SELECT * FROM intraday_accuracy_history WHERE ${weekdayFilter} ORDER BY date ASC`;
+  return (limit
+    ? getDb().prepare(sql).all(limit)
+    : getDb().prepare(sql).all()) as AccuracyHistoryEntry[];
+}
+
+export function getIntradayTodayStats(date: string): { total: number; correct: number } {
+  const row = getDb().prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct
+    FROM intraday_predictions
+    WHERE prediction_date = ? AND direction != 'UNABLE' AND actual_direction IS NOT NULL
+  `).get(date) as { total: number; correct: number };
+  return { total: row.total, correct: row.correct ?? 0 };
+}
+
+// === Intraday Notes ===
+
+export function getAllIntradayNotes(llmId: string): Note[] {
+  return getDb().prepare(
+    'SELECT * FROM intraday_notes WHERE llm_id = ? ORDER BY slot_number'
+  ).all(llmId) as Note[];
+}
+
+export function getNonEmptyIntradayNotes(llmId: string): Note[] {
+  return getDb().prepare(
+    "SELECT * FROM intraday_notes WHERE llm_id = ? AND content IS NOT NULL AND content != '' ORDER BY slot_number"
+  ).all(llmId) as Note[];
+}
+
+export function updateIntradayNote(slotNumber: number, content: string, updatedBy: string, llmId: string): void {
+  getDb().prepare(`
+    UPDATE intraday_notes SET content = ?, last_updated_at = datetime('now'), last_updated_by = ?
+    WHERE llm_id = ? AND slot_number = ?
+  `).run(content, updatedBy, llmId, slotNumber);
+}
+
+export function ensureIntradayNoteSlots(llmId: string): void {
+  const count = getDb().prepare(
+    'SELECT COUNT(*) as count FROM intraday_notes WHERE llm_id = ?'
+  ).get(llmId) as { count: number };
+  if (count.count === 0) {
+    const insert = getDb().prepare(
+      'INSERT OR IGNORE INTO intraday_notes (llm_id, slot_number, content) VALUES (?, ?, NULL)'
+    );
+    for (let i = 1; i <= 50; i++) {
+      insert.run(llmId, i);
+    }
+  }
+}
+
+export function updateIntradayPredictionTranslations(id: number, reasoningKo: string | null, searchReportsKo: string | null): void {
+  getDb().prepare(
+    'UPDATE intraday_predictions SET reasoning_ko = ?, search_reports_ko = ? WHERE id = ?'
+  ).run(reasoningKo, searchReportsKo, id);
+}
+
+export function getRecentIntradayPredictions(ticker: string, limit: number, llmId?: string): IntradayPrediction[] {
+  if (llmId) {
+    return getDb().prepare(
+      'SELECT * FROM intraday_predictions WHERE ticker = ? AND llm_id = ? ORDER BY prediction_date DESC, prediction_hour DESC, prediction_minute DESC LIMIT ?'
+    ).all(ticker, llmId, limit) as IntradayPrediction[];
+  }
+  return getDb().prepare(
+    'SELECT * FROM intraday_predictions WHERE ticker = ? ORDER BY prediction_date DESC, prediction_hour DESC, prediction_minute DESC LIMIT ?'
+  ).all(ticker, limit) as IntradayPrediction[];
 }

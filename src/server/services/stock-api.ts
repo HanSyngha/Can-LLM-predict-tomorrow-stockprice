@@ -10,6 +10,7 @@
 import type { Stock, NewStockPrice, TickerSearchResult } from '../types/index.js';
 import * as dal from '../db/dal.js';
 import * as yahoo from './yahoo-client.js';
+import { getIntradayHistory } from './yahoo-client.js';
 import { LLMClient } from '../llm/llm-client.js';
 import { getProviderConfig } from '../types/provider.js';
 import type { LLMProvider } from '../types/provider.js';
@@ -311,4 +312,31 @@ export async function fetchTodayResult(
   };
   dal.upsertPrice(priceData);
   return priceData;
+}
+
+// === Intraday Price Functions ===
+
+export async function fetchIntradayPrices(stock: Stock, rangeDays: number = 15): Promise<void> {
+  const rawPrices = await getIntradayHistory(stock.ticker, rangeDays);
+  if (rawPrices.length === 0) {
+    logger.warn(`No intraday prices fetched for ${stock.ticker}`);
+    return;
+  }
+  dal.upsertIntradayPrices(rawPrices.map(p => ({
+    ticker: p.ticker,
+    datetime: p.datetime,
+    price: p.price,
+    volume: p.volume,
+  })));
+  logger.info(`Cached ${rawPrices.length} intraday prices for ${stock.ticker}`);
+}
+
+export async function ensureIntradayPrices(stock: Stock, minCount: number = 100): Promise<void> {
+  const existing = dal.getRecentIntradayPrices(stock.ticker, 1);
+  // If we have recent data (within last 2 hours), skip
+  if (existing.length > 0) {
+    const lastFetched = new Date(existing[0]!.fetched_at).getTime();
+    if (Date.now() - lastFetched < 2 * 60 * 60 * 1000) return;
+  }
+  await fetchIntradayPrices(stock, 20); // 20 days to get ~100+ hourly prices
 }

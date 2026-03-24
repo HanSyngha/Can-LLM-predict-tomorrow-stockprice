@@ -117,3 +117,73 @@ export async function autoTranslateNote(llmId: string, slotNumber: number, conte
     logger.warn(`Note translation failed for slot ${slotNumber}`, err);
   }
 }
+
+/**
+ * Auto-translate an intraday prediction's reasoning and search reports to Korean.
+ */
+export async function autoTranslateIntradayPrediction(ticker: string, date: string, hour: number, minute: number, llmId: string): Promise<void> {
+  try {
+    const client = getTranslateClient();
+    if (!client) return;
+
+    const pred = getDb().prepare(
+      'SELECT id, reasoning, search_reports FROM intraday_predictions WHERE ticker = ? AND prediction_date = ? AND prediction_hour = ? AND prediction_minute = ? AND llm_id = ?'
+    ).get(ticker, date, hour, minute, llmId) as
+      { id: number; reasoning: string | null; search_reports: string | null } | undefined;
+    if (!pred) return;
+
+    let reasoningKo: string | null = null;
+    let searchReportsKo: string | null = null;
+
+    if (pred.reasoning) {
+      try {
+        reasoningKo = await translateText(client, pred.reasoning);
+      } catch (err) {
+        logger.warn(`Auto-translate intraday reasoning failed for ${ticker}:${hour}:${minute}`, err);
+      }
+    }
+
+    if (pred.search_reports) {
+      try {
+        const reports: string[] = JSON.parse(pred.search_reports);
+        const translated: string[] = [];
+        for (const report of reports) {
+          if (report.trim()) {
+            const t = await translateText(client, report);
+            translated.push(t || report);
+          }
+        }
+        searchReportsKo = JSON.stringify(translated);
+      } catch (err) {
+        logger.warn(`Auto-translate intraday search reports failed for ${ticker}:${hour}:${minute}`, err);
+      }
+    }
+
+    if (reasoningKo || searchReportsKo) {
+      dal.updateIntradayPredictionTranslations(pred.id, reasoningKo, searchReportsKo);
+      logger.info(`Auto-translated intraday prediction ${ticker} slot ${hour}:${minute}`);
+    }
+  } catch (err) {
+    logger.warn(`Auto-translate intraday failed for ${ticker}:${hour}:${minute}`, err);
+  }
+}
+
+/**
+ * Auto-translate an intraday note's content to Korean.
+ */
+export async function autoTranslateIntradayNote(llmId: string, slotNumber: number, content: string): Promise<void> {
+  try {
+    const client = getTranslateClient();
+    if (!client) return;
+
+    const translated = await translateText(client, content);
+    if (translated) {
+      getDb().prepare(
+        'UPDATE intraday_notes SET content_ko = ? WHERE llm_id = ? AND slot_number = ?'
+      ).run(translated, llmId, slotNumber);
+      logger.info(`Auto-translated intraday note slot ${slotNumber} [${llmId}]`);
+    }
+  } catch (err) {
+    logger.warn(`Intraday note translation failed for slot ${slotNumber}`, err);
+  }
+}

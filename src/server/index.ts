@@ -22,6 +22,8 @@ import { settingRoutes } from './routes/settings.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { translateRoutes } from './routes/translate.js';
 import { initScheduler } from './services/scheduler.js';
+import { initIntradayScheduler } from './services/intraday-scheduler.js';
+import { intradayRoutes } from './routes/intraday.js';
 import { logger } from './utils/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -63,6 +65,7 @@ async function main() {
   await app.register(settingRoutes);
   await app.register(dashboardRoutes);
   await app.register(translateRoutes);
+  await app.register(intradayRoutes);
 
   // SPA fallback: serve index.html for any non-API, non-file routes
   app.setNotFoundHandler(async (request, reply) => {
@@ -81,8 +84,9 @@ async function main() {
     return reply.status(404).send({ error: 'Not Found' });
   });
 
-  // Initialize scheduler
+  // Initialize schedulers
   initScheduler();
+  initIntradayScheduler();
 
   // Start server
   try {

@@ -1,6 +1,16 @@
+# ============================================================
+# 사내망 배포용 — docker compose up -d --build --force-recreate
+# .env 파일에 프록시 설정 필요
+# ============================================================
+
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
     ports:
       - "4001:4001"
     volumes:
@@ -10,6 +20,10 @@ services:
       - TZ=Asia/Seoul
       - PORT=4001
       - NODE_ENV=production
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
     restart: always
     deploy:
       resources:

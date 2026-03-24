@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/Card';
 import { Spinner } from '../components/ui/Spinner';
@@ -34,6 +34,7 @@ const LLM_COLORS = [
 export function StockDetail() {
   const { ticker } = useParams<{ ticker: string }>();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [selectedLLM, setSelectedLLM] = useState<string | undefined>(undefined);
 
   const isAllLLMs = !selectedLLM;
@@ -164,6 +165,20 @@ export function StockDetail() {
               </p>
               <p className="text-2xl font-black text-slate-800 dark:text-white">{totalPreds}</p>
             </div>
+            <button
+              onClick={async () => {
+                if (window.confirm(t('stock.removeConfirm'))) {
+                  await stocksApi.remove(ticker!);
+                  navigate('/');
+                }
+              }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors hidden sm:block"
+              title={t('stock.remove')}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
           </div>
         </div>
       </header>

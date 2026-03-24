@@ -160,6 +160,59 @@ export async function getHistory(
   }
 }
 
+/**
+ * Get intraday (hourly) price data using Yahoo Finance chart API.
+ */
+export async function getIntradayHistory(
+  ticker: string,
+  rangeDays: number = 15
+): Promise<Array<{ ticker: string; datetime: string; price: number | null; volume: number | null }>> {
+  try {
+    const endMs = Date.now();
+    const startMs = endMs - rangeDays * 24 * 60 * 60 * 1000;
+    const period1 = Math.floor(startMs / 1000);
+    const period2 = Math.floor(endMs / 1000);
+
+    const { data } = await axios.get(
+      `${YAHOO_BASE}/v8/finance/chart/${encodeURIComponent(ticker)}`,
+      {
+        params: { period1, period2, interval: '1h', events: 'history' },
+        headers: HEADERS,
+        timeout: 15000,
+      }
+    );
+
+    const result = data?.chart?.result?.[0];
+    if (!result) return [];
+
+    const timestamps: number[] = result.timestamp || [];
+    const indicators = result.indicators?.quote?.[0];
+    if (!indicators) return [];
+
+    const closes: (number | null)[] = indicators.close || [];
+    const volumes: (number | null)[] = indicators.volume || [];
+
+    const prices: Array<{ ticker: string; datetime: string; price: number | null; volume: number | null }> = [];
+
+    for (let i = 0; i < timestamps.length; i++) {
+      const d = new Date(timestamps[i]! * 1000);
+      // Format as YYYY-MM-DDTHH:MM
+      const datetime = d.toISOString().slice(0, 16);
+      prices.push({
+        ticker,
+        datetime,
+        price: closes[i] ?? null,
+        volume: volumes[i] ?? null,
+      });
+    }
+
+    return prices;
+  } catch (error) {
+    logger.error(`Yahoo Finance intraday history failed for ${ticker}`, error);
+    return [];
+  }
+}
+
 function mapExchange(exchange: string | undefined): string {
   if (!exchange) return 'OTHER';
   const ex = exchange.toUpperCase();

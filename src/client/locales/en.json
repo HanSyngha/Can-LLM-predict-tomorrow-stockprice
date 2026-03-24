@@ -34,6 +34,7 @@
     "addStock": "Add Stock",
     "notes": "Notes",
     "admin": "Monitor",
+    "intraday": "Intraday",
     "settings": "Settings"
   },
   "theme": {
@@ -204,6 +205,8 @@
     "title": "Self-Reflection Notes",
     "subtitle": "Learning notes written by LLMs",
     "viewAll": "View Notes",
+    "dailyTab": "Daily Notes",
+    "intradayTab": "Intraday Notes",
     "emptyTitle": "No notes written yet",
     "emptyDescription": "Notes will be written when LLMs perform reviews.",
     "lastUpdatedBy": "Last updated by"
@@ -226,5 +229,25 @@
     "noActivity": "No active tasks at the moment",
     "avgDuration": "Avg Inference Time per Model",
     "predictions": "runs"
+  },
+  "intraday": {
+    "title": "Intraday Predictions",
+    "subtitle": "Hourly AI price predictions",
+    "overallAccuracy": "Intraday Accuracy",
+    "todayPredictions": "Today's Predictions",
+    "todayCorrect": "Today Correct",
+    "noData": "No intraday predictions yet",
+    "noDataDesc": "Predictions will start automatically during market hours",
+    "accuracyTrend": "Intraday Accuracy Trend",
+    "accuracyTrendDesc": "Cumulative intraday prediction accuracy",
+    "slot": "Time",
+    "direction": "Prediction",
+    "reference": "Ref Price",
+    "actualPrice": "Actual",
+    "change": "Change %",
+    "result": "Result",
+    "pending": "Pending",
+    "correct": "Correct",
+    "incorrect": "Wrong"
   }
 }

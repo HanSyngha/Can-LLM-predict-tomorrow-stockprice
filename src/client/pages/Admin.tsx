@@ -96,14 +96,14 @@ export function Admin() {
               </div>
 
               {/* Progress bar */}
-              {isActive && status?.progress.total > 0 && (
+              {isActive && status?.progress?.total && status.progress.total > 0 && (
                 <div className="px-4 sm:px-6 py-3 border-t border-slate-100 dark:border-[#2c2c2e]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                       {t('admin.progress')}
                     </span>
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {status.progress.completed} / {status.progress.total} ({progressPercent}%)
+                      {status!.progress!.completed} / {status!.progress!.total} ({progressPercent}%)
                     </span>
                   </div>
                   <div className="h-2 bg-slate-100 dark:bg-[#2c2c2e] rounded-full overflow-hidden">

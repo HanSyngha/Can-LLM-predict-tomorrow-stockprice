@@ -6,7 +6,7 @@ import { Spinner } from '../components/ui/Spinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useI18n } from '../contexts/I18nContext';
 import { useApi } from '../hooks/useApi';
-import { notesApi, llmsApi } from '../lib/api';
+import { notesApi, intradayNotesApi, llmsApi } from '../lib/api';
 import { renderMarkdown } from '../lib/markdown';
 import type { Note, LLMConfig } from '../lib/types';
 
@@ -53,6 +53,7 @@ function NoteLangTabs({ note }: { note: Note }) {
 export function Notes() {
   const { t } = useI18n();
   const [selectedLLM, setSelectedLLM] = useState<string | undefined>(undefined);
+  const [noteType, setNoteType] = useState<'daily' | 'intraday'>('daily');
 
   const { data: llmConfigs } = useApi<LLMConfig[]>(
     () => llmsApi.getAll(),
@@ -63,8 +64,8 @@ export function Notes() {
   const effectiveLLM = selectedLLM || (activeLLMs.length > 0 ? activeLLMs[0]!.id : undefined);
 
   const { data: notes, loading } = useApi<Note[]>(
-    () => notesApi.getAll(effectiveLLM),
-    [effectiveLLM]
+    () => noteType === 'daily' ? notesApi.getAll(effectiveLLM) : intradayNotesApi.getAll(effectiveLLM),
+    [effectiveLLM, noteType]
   );
 
   const noteMap = new Map<number, Note>();
@@ -85,6 +86,30 @@ export function Notes() {
       <Header title={t('notes.title')} subtitle={t('notes.subtitle')} showBack />
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
         <div className="space-y-4 sm:space-y-6 animate-fade-in">
+          {/* Daily / Intraday toggle */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#2c2c2e] rounded-lg p-1 w-fit">
+            <button
+              onClick={() => setNoteType('daily')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-md transition-all ${
+                noteType === 'daily'
+                  ? 'bg-white dark:bg-[#48484a] text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              {t('notes.dailyTab')}
+            </button>
+            <button
+              onClick={() => setNoteType('intraday')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-md transition-all ${
+                noteType === 'intraday'
+                  ? 'bg-white dark:bg-[#48484a] text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              {t('notes.intradayTab')}
+            </button>
+          </div>
+
           {activeLLMs.length > 0 && (
             <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1">
               <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 shrink-0">

@@ -148,3 +148,130 @@ export function getMarketGroupConfigs(): Array<{
     },
   ];
 }
+
+// === Intraday Schedule Utilities ===
+
+export interface IntradaySlot {
+  predictAtHour: number;
+  predictAtMinute: number;
+  targetHour: number;
+  targetMinute: number;
+}
+
+/**
+ * Get all intraday prediction slots for a market.
+ * KOSPI/KOSDAQ: 08:00→09:00, 09:00→10:00, ..., 14:00→15:00 (7 slots)
+ * NASDAQ: 08:30→09:30, 09:30→10:30, ..., 14:30→15:30 (7 slots)
+ */
+export function getIntradaySlots(market: string): IntradaySlot[] {
+  if (market === 'KOSPI' || market === 'KOSDAQ') {
+    const slots: IntradaySlot[] = [];
+    for (let h = 8; h <= 14; h++) {
+      slots.push({ predictAtHour: h, predictAtMinute: 0, targetHour: h + 1, targetMinute: 0 });
+    }
+    return slots;
+  }
+  if (market === 'NASDAQ') {
+    const slots: IntradaySlot[] = [];
+    for (let h = 8; h <= 14; h++) {
+      slots.push({ predictAtHour: h, predictAtMinute: 30, targetHour: h + 1, targetMinute: 30 });
+    }
+    return slots;
+  }
+  return [];
+}
+
+/**
+ * Get current local time for a market (hour, minute, date).
+ */
+export function getLocalTimeForMarket(market: string): { hour: number; minute: number; date: string } {
+  const tz = getMarketTimezone(market);
+  const now = new Date();
+  const localMs = now.getTime() + tz.getUtcOffsetHours() * 60 * 60 * 1000;
+  const d = new Date(localMs);
+  return {
+    hour: d.getUTCHours(),
+    minute: d.getUTCMinutes(),
+    date: d.toISOString().slice(0, 10),
+  };
+}
+
+/**
+ * Get the current active intraday slot for a market.
+ * Returns the slot that should run NOW, or null if outside trading hours.
+ * "Active" means: we're at or past the prediction time, but before the next slot.
+ */
+export function getCurrentIntradaySlot(market: string): IntradaySlot | null {
+  const { hour, minute, date } = getLocalTimeForMarket(market);
+  if (!isTradingDay(date)) return null;
+
+  const slots = getIntradaySlots(market);
+  if (slots.length === 0) return null;
+
+  const nowMinutes = hour * 60 + minute;
+
+  // Find the most recent slot that we should execute
+  let activeSlot: IntradaySlot | null = null;
+  for (const slot of slots) {
+    const slotMinutes = slot.predictAtHour * 60 + slot.predictAtMinute;
+    // Slot is active if current time is within a 30-minute window of slot start
+    if (nowMinutes >= slotMinutes && nowMinutes < slotMinutes + 30) {
+      activeSlot = slot;
+    }
+  }
+
+  return activeSlot;
+}
+
+/**
+ * Get the previous slot whose prediction needs to be graded.
+ * Returns the slot that predicted the price at the current slot's time.
+ */
+export function getPreviousIntradaySlot(market: string): IntradaySlot | null {
+  const { hour, minute, date } = getLocalTimeForMarket(market);
+  if (!isTradingDay(date)) return null;
+
+  const slots = getIntradaySlots(market);
+  const nowMinutes = hour * 60 + minute;
+
+  // Find the slot before the current one (its target time has passed)
+  for (let i = slots.length - 1; i >= 0; i--) {
+    const slot = slots[i]!;
+    const targetMinutes = slot.targetHour * 60 + slot.targetMinute;
+    if (nowMinutes >= targetMinutes) {
+      return slot;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get all intraday slots whose prediction time has passed but haven't been executed yet.
+ * Used to catch up on missed slots (e.g., if previous cycle was slow).
+ */
+export function getPendingIntradaySlots(market: string): IntradaySlot[] {
+  const { hour, minute, date } = getLocalTimeForMarket(market);
+  if (!isTradingDay(date)) return [];
+
+  const slots = getIntradaySlots(market);
+  const nowMinutes = hour * 60 + minute;
+
+  // Return all slots whose prediction time has passed (not just the current 30-min window)
+  return slots.filter(slot => {
+    const slotMinutes = slot.predictAtHour * 60 + slot.predictAtMinute;
+    return nowMinutes >= slotMinutes;
+  });
+}
+
+/**
+ * Check if current time is at the intraday review time (market close).
+ * KOSPI: 15:30 KST, NASDAQ: 16:00 ET
+ */
+export function isIntradayReviewTime(market: string): boolean {
+  const { hour, minute } = getLocalTimeForMarket(market);
+  const tz = getMarketTimezone(market);
+  const reviewMinutes = tz.closeHour * 60 + tz.closeMinute;
+  const nowMinutes = hour * 60 + minute;
+  // Within 30-minute window after market close
+  return nowMinutes >= reviewMinutes && nowMinutes < reviewMinutes + 30;
+}

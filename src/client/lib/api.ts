@@ -14,6 +14,10 @@ import type {
   LLMComparisonEntry,
   DatePredictionComparison,
   SchedulerStatus,
+  IntradaySummary,
+  IntradayTodayEntry,
+  IntradayPrediction,
+  IntradayPrice,
 } from './types';
 import { ApiError } from './types';
 
@@ -98,6 +102,12 @@ export const notesApi = {
     request<Note[]>(`/notes${llmId ? `?llm_id=${encodeURIComponent(llmId)}` : ''}`),
 };
 
+// === Intraday Notes ===
+export const intradayNotesApi = {
+  getAll: (llmId?: string) =>
+    request<Note[]>(`/intraday/notes${llmId ? `?llm_id=${encodeURIComponent(llmId)}` : ''}`),
+};
+
 // === Translate ===
 export const translateApi = {
   translate: (text: string, targetLang: 'ko' | 'en') =>
@@ -167,4 +177,25 @@ export const llmsApi = {
       `/settings/llms/${encodeURIComponent(id)}/test`,
       { method: 'POST' }
     ),
+};
+
+// === Intraday ===
+export const intradayApi = {
+  getSummary: () => request<IntradaySummary>('/intraday/summary'),
+  getToday: () => request<IntradayTodayEntry[]>('/intraday/today'),
+  getTodayForStock: (ticker: string) =>
+    request<IntradayPrediction[]>(`/intraday/today/${ticker}`),
+  getPrices: (ticker: string, limit?: number) =>
+    request<IntradayPrice[]>(`/intraday/${ticker}/prices${limit ? `?limit=${limit}` : ''}`),
+  getAccuracyHistory: (llmId?: string) => {
+    const params = new URLSearchParams();
+    if (llmId) params.set('llm_id', llmId);
+    const qs = params.toString();
+    return request<AccuracyHistoryEntry[]>(`/intraday/accuracy-history${qs ? `?${qs}` : ''}`);
+  },
+  trigger: (markets?: string[]) =>
+    request<{ status: string; markets: string[] }>('/intraday/trigger', {
+      method: 'POST',
+      body: JSON.stringify({ markets }),
+    }),
 };

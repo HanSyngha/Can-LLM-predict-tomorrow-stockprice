@@ -179,6 +179,50 @@ export interface ScheduleSettings {
 
 export interface GeneralSettings {
   flatThreshold: number;
+  intradayFlatThreshold?: number;
+  nasdaqDst?: 'auto' | 'on' | 'off';
+}
+
+// === Intraday ===
+export interface IntradayPrediction {
+  id: number;
+  llm_id: string;
+  ticker: string;
+  prediction_date: string;
+  prediction_hour: number;
+  prediction_minute: number;
+  target_hour: number;
+  target_minute: number;
+  created_at: string;
+  direction: Direction;
+  reasoning: string | null;
+  reference_price: number | null;
+  actual_direction: Direction | null;
+  actual_change_rate: number | null;
+  actual_price: number | null;
+  is_correct: number | null;
+}
+
+export interface IntradaySummary {
+  overallAccuracy: number;
+  totalPredictions: number;
+  totalCorrect: number;
+  todayPredictions: number;
+  todayCorrect: number;
+  llmAccuracies: LLMAccuracySummary[];
+}
+
+export interface IntradayTodayEntry {
+  ticker: string;
+  name: string;
+  name_ko: string | null;
+  market: string;
+  predictions: IntradayPrediction[];
+}
+
+export interface IntradayPrice {
+  datetime: string;
+  price: number | null;
 }
 
 // === Scheduler Status ===

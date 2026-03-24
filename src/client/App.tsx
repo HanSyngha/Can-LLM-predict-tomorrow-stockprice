@@ -9,6 +9,7 @@ import { StockAdd } from './pages/StockAdd';
 import { Settings } from './pages/Settings';
 import { Notes } from './pages/Notes';
 import { Admin } from './pages/Admin';
+import { Intraday } from './pages/Intraday';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/stock/add" element={<StockAdd />} />
               <Route path="/stock/:ticker" element={<StockDetail />} />
+              <Route path="/intraday" element={<Intraday />} />
               <Route path="/notes" element={<Notes />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/settings" element={<Settings />} />
