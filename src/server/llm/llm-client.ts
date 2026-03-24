@@ -55,6 +55,8 @@ export class LLMClient implements LLMClientInterface {
         ...(config.extraHeaders ?? {}),
       },
       timeout: 120_000,
+      // 사내 LLM은 프록시 우회 (HTTP_PROXY 환경변수 무시)
+      proxy: false,
     });
   }
 
