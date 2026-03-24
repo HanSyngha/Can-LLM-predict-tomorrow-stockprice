@@ -12,7 +12,6 @@ import { Notes } from './pages/Notes';
 import { Admin } from './pages/Admin';
 import { Intraday } from './pages/Intraday';
 import { Login } from './pages/Login';
-import { Spinner } from './components/ui/Spinner';
 
 function AccessLogger() {
   const location = useLocation();
@@ -32,31 +31,32 @@ function AccessLogger() {
   return null;
 }
 
-function AuthGate() {
+/** Admin-only: not logged in → login page, not admin → home */
+function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0a0a0c]">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
+  if (loading) return null;
   if (!user) return <Login />;
+  if (!user.isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  const { user } = useAuth();
 
   return (
     <AppShell>
-      <AccessLogger />
+      {user && <AccessLogger />}
       <Routes>
+        {/* Public - 로그인 없이 누구나 접근 */}
         <Route path="/" element={<Dashboard />} />
         <Route path="/stock/add" element={<StockAdd />} />
         <Route path="/stock/:ticker" element={<StockDetail />} />
         <Route path="/intraday" element={<Intraday />} />
         <Route path="/notes" element={<Notes />} />
-        {/* Admin-only routes */}
-        <Route path="/admin" element={user.isAdmin ? <Admin /> : <Navigate to="/" replace />} />
-        <Route path="/settings" element={user.isAdmin ? <Settings /> : <Navigate to="/" replace />} />
+        <Route path="/login" element={<Login />} />
+        {/* Admin only - 로그인 + syngha.han만 */}
+        <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+        <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
@@ -69,7 +69,7 @@ export default function App() {
       <I18nProvider>
         <AuthProvider>
           <BrowserRouter>
-            <AuthGate />
+            <AppRoutes />
           </BrowserRouter>
         </AuthProvider>
       </I18nProvider>
