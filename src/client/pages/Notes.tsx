@@ -84,7 +84,7 @@ export function Notes() {
   return (
     <>
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-20 md:pb-8">
+      <main className="w-full px-5 sm:px-8 lg:px-10 py-6 sm:py-8 pb-20 md:pb-8">
         <div className="space-y-4 sm:space-y-6 animate-fade-in">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{t('notes.title')}</h1>

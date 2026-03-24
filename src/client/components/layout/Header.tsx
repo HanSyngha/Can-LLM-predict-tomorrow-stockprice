@@ -17,7 +17,7 @@ export function Header({ title, subtitle, showBack = false, rightContent }: Head
 
   return (
     <header className="bg-white/70 dark:bg-[#0e0e10]/70 backdrop-blur-2xl border-b border-slate-200/60 dark:border-[#2a2a2c] sticky top-0 z-40 pt-safe">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="w-full px-5 sm:px-8 lg:px-10 h-16 flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center gap-4 min-w-0">
           {showBack && (

@@ -131,7 +131,7 @@ export function StockDetail() {
     <>
       {/* Header */}
       <header className="bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-slate-200 dark:border-[#38383a] shadow-[0_1px_3px_rgba(0,0,0,0.05)] sticky top-0 z-50 pt-safe">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+        <div className="w-full px-5 sm:px-8 lg:px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Link
               to="/"
@@ -183,7 +183,7 @@ export function StockDetail() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
+      <main className="w-full px-5 sm:px-8 lg:px-10 py-6 sm:py-8">
         <div className="space-y-3 sm:space-y-8 animate-fade-in">
           {/* LLM selector tabs */}
           {llmConfigs && llmConfigs.length > 0 && (

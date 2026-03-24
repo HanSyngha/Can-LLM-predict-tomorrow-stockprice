@@ -100,26 +100,31 @@ function logAccess(loginid: string, path: string, method: string, ip: string | n
 // === Routes ===
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  // POST /api/auth/login - SSO login
+  // POST /api/auth/login - SSO login (nexus-coder compatible)
+  // Accepts: Authorization header (Bearer sso.xxx) OR body { token, loginid }
   app.post('/api/auth/login', async (request, reply) => {
-    const body = request.body as { token?: string; loginid?: string; username?: string; deptname?: string };
+    const body = request.body as { token?: string; loginid?: string; username?: string; deptname?: string } | null;
+    const authHeader = request.headers.authorization;
 
     let loginid: string;
     let username: string;
     let deptname: string;
 
-    if (body.token) {
-      // SSO token format: "sso.<base64json>"
-      const raw = body.token.startsWith('sso.') ? body.token.substring(4) : body.token;
-      const decoded = decodeSSOToken(raw);
+    // 1. Try Authorization header first (nexus-coder style: Bearer sso.xxx)
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const ssoRaw = headerToken?.startsWith('sso.') ? headerToken.substring(4) :
+                   body?.token?.startsWith('sso.') ? body.token.substring(4) :
+                   body?.token || null;
+
+    if (ssoRaw) {
+      const decoded = decodeSSOToken(ssoRaw);
       if (!decoded || !decoded.loginid) {
         return reply.status(400).send({ error: 'Invalid SSO token' });
       }
       loginid = decoded.loginid;
       username = decoded.username;
       deptname = decoded.deptname;
-    } else if (body.loginid) {
-      // Direct login (SSO callback data)
+    } else if (body?.loginid) {
       loginid = body.loginid;
       username = body.username || loginid;
       deptname = body.deptname || '';

@@ -62,10 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginWithSSOToken = useCallback(async (token: string) => {
-    const res = await authRequest('/auth/login', {
+    // nexus-coder 호환: Authorization 헤더로 SSO 토큰 전송
+    const res = await fetch('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ token }),
-    });
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: '{}',
+    }).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); });
     localStorage.setItem(TOKEN_KEY, res.token);
     setUser(res.user);
   }, []);

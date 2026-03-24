@@ -17,8 +17,8 @@ export function Settings() {
   return (
     <>
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-20 md:pb-8">
-        <div className="max-w-3xl mx-auto space-y-5 animate-fade-in">
+      <main className="w-full px-5 sm:px-8 lg:px-10 py-6 sm:py-8 pb-20 md:pb-8">
+        <div className="space-y-5 animate-fade-in">
           {/* Page title */}
           <div className="mb-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
