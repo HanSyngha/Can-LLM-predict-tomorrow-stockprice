@@ -196,6 +196,13 @@ export interface AccuracyStats {
   rate: number;
 }
 
+// === Proxy Settings (Agent-Dashboard integration) ===
+
+export interface ProxySettings {
+  serviceId: string;       // x-service-id header (e.g. "stock")
+  deptName: string;        // x-dept-name header (e.g. "S/W혁신팀(S.LSI)")
+}
+
 // === Settings Types ===
 
 export interface LLMProviderSettings {

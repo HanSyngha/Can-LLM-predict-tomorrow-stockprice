@@ -4,123 +4,87 @@
 
 :root {
   --surface-primary: #ffffff;
-  --surface-secondary: #f8fafc;
-  --surface-tertiary: #f1f5f9;
-  --border-primary: #e2e8f0;
-  --border-secondary: #f1f5f9;
+  --surface-secondary: #fafbfc;
+  --surface-tertiary: #f3f4f6;
+  --border-primary: #e5e7eb;
+  --border-secondary: #f3f4f6;
+  --accent: 99 102 241;
 }
 
 .dark {
-  --surface-primary: #1c1c1e;
-  --surface-secondary: #000000;
-  --surface-tertiary: #2c2c2e;
-  --border-primary: #38383a;
-  --border-secondary: #2c2c2e;
+  --surface-primary: #111113;
+  --surface-secondary: #0a0a0c;
+  --surface-tertiary: #1a1a1e;
+  --border-primary: #27272a;
+  --border-secondary: #1a1a1e;
+  --accent: 129 140 248;
 }
 
 /* Custom scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-track {
-  background: #2c2c2e;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #48484a;
-  border-radius: 10px;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; }
 
 /* Global scrollbar */
-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.dark body::-webkit-scrollbar-thumb {
-  background: #48484a;
-}
+body::-webkit-scrollbar { width: 6px; }
+body::-webkit-scrollbar-track { background: transparent; }
+body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+.dark body::-webkit-scrollbar-thumb { background: #374151; }
 
 /* Base body styles */
 body {
   @apply text-slate-900 font-sans antialiased;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  background-attachment: fixed;
+  background: #fafbfc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .dark body {
-  @apply text-white;
-  background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
-  background-attachment: fixed;
+  @apply text-slate-100;
+  background: #0a0a0c;
 }
 
 /* Safe area inset support */
 @supports (padding: env(safe-area-inset-bottom)) {
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* Shimmer animation for skeleton loading */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 /* Transition for interactive elements only */
-input,
-textarea,
-select,
-button,
-a {
+input, textarea, select, button, a {
   transition-property: background-color, border-color, color, opacity, box-shadow, transform;
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Focus states - semi-transparent ring */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
-button:focus-visible,
-a:focus-visible {
+/* Focus states */
+input:focus-visible, textarea:focus-visible, select:focus-visible,
+button:focus-visible, a:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 2px rgba(var(--accent), 0.4);
+}
+
+/* Stat card glow effect */
+.stat-glow {
+  position: relative;
+}
+.stat-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.stat-glow:hover::before {
+  opacity: 1;
 }

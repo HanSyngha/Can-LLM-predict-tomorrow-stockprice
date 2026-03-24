@@ -193,7 +193,13 @@
     "testingConnection": "Testing connection...",
     "maxLLMReached": "Maximum 5 LLMs reached",
     "translateLlm": "Translate LLM",
-    "translateLlmDesc": "LLM used to translate outputs (reasoning, notes, search reports) on demand"
+    "translateLlmDesc": "LLM used to translate outputs (reasoning, notes, search reports) on demand",
+    "proxySettings": "Service Integration",
+    "proxySettingsDesc": "Headers for Agent-Dashboard LLM proxy integration (Background Service)",
+    "serviceId": "Service ID (x-service-id)",
+    "serviceIdHint": "Service name registered in Agent-Dashboard (e.g. stock)",
+    "deptName": "Team Name (x-dept-name)",
+    "deptNameHint": "Format: TeamName(BusinessUnit) (e.g. S/W Innovation(S.LSI))"
   },
   "translate": {
     "original": "Original",

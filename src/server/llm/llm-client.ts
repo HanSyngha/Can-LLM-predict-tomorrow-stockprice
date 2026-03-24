@@ -31,6 +31,7 @@ export interface LLMClientConfig {
   model: string;
   provider: LLMProvider;
   providerConfig?: ProviderConfig;
+  extraHeaders?: Record<string, string>;
 }
 
 export class LLMClient implements LLMClientInterface {
@@ -51,6 +52,7 @@ export class LLMClient implements LLMClientInterface {
       headers: {
         'Content-Type': 'application/json',
         ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+        ...(config.extraHeaders ?? {}),
       },
       timeout: 120_000,
     });

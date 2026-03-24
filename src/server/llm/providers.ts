@@ -7,10 +7,26 @@ export { PROVIDER_CONFIGS, getProviderConfig } from '../types/provider.js';
 
 import { getProviderConfig } from '../types/provider.js';
 import type { LLMProvider } from '../types/provider.js';
-import type { LLMProviderSettings, LLMConfig } from '../types/index.js';
+import type { LLMProviderSettings, LLMConfig, ProxySettings } from '../types/index.js';
 import { getSetting, getLLMConfig } from '../db/dal.js';
 import { LLMClient } from './llm-client.js';
 import { logger } from '../utils/logger.js';
+
+/**
+ * Build extra headers for Agent-Dashboard proxy integration.
+ * Reads proxy_settings from DB: { serviceId, deptName }
+ */
+function getProxyHeaders(): Record<string, string> {
+  const ps = getSetting<ProxySettings>('proxy_settings');
+  if (!ps?.serviceId) return {};
+  const headers: Record<string, string> = {
+    'x-service-id': ps.serviceId,
+  };
+  if (ps.deptName) {
+    headers['x-dept-name'] = ps.deptName;
+  }
+  return headers;
+}
 
 /**
  * Create an LLMClient from the DB settings.
@@ -49,6 +65,7 @@ export function createLLMClient(useSearch = false): LLMClient {
     model,
     provider: providerId as LLMProvider,
     providerConfig,
+    extraHeaders: getProxyHeaders(),
   });
 }
 
@@ -66,6 +83,7 @@ export function createLLMClientForConfig(config: LLMConfig): LLMClient {
     model: config.model,
     provider: config.provider as LLMProvider,
     providerConfig,
+    extraHeaders: getProxyHeaders(),
   });
 }
 

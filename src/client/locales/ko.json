@@ -193,7 +193,13 @@
     "testingConnection": "연결 테스트 중...",
     "maxLLMReached": "최대 5개 LLM 도달",
     "translateLlm": "번역 LLM",
-    "translateLlmDesc": "LLM 출력(추론, 노트, 검색 리포트)을 번역하는 데 사용되는 LLM입니다"
+    "translateLlmDesc": "LLM 출력(추론, 노트, 검색 리포트)을 번역하는 데 사용되는 LLM입니다",
+    "proxySettings": "서비스 연동 설정",
+    "proxySettingsDesc": "Agent-Dashboard LLM 프록시 연동을 위한 헤더 설정 (Background Service)",
+    "serviceId": "서비스 ID (x-service-id)",
+    "serviceIdHint": "Agent-Dashboard에 등록된 서비스 이름 (예: stock)",
+    "deptName": "팀명 (x-dept-name)",
+    "deptNameHint": "팀명(사업부) 형식 (예: S/W혁신팀(S.LSI))"
   },
   "translate": {
     "original": "원문",

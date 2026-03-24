@@ -11,12 +11,12 @@ interface CardProps {
 
 export function Card({ children, className = '', hoverable = false, onClick, padding = true, variant = 'default' }: CardProps) {
   const base = variant === 'glass'
-    ? 'bg-white/60 dark:bg-[#1c1c1e]/60 backdrop-blur-lg rounded-xl shadow-card dark:shadow-card-dark border border-slate-200/60 dark:border-[#38383a]/60'
-    : 'bg-white dark:bg-[#1c1c1e] rounded-xl shadow-card dark:shadow-card-dark border border-slate-200/60 dark:border-[#38383a]/60';
+    ? 'bg-white/50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-white/[0.06]'
+    : 'bg-white dark:bg-[#141416] rounded-2xl border border-slate-200/60 dark:border-white/[0.06] shadow-sm dark:shadow-none';
   const hoverStyles = hoverable
-    ? 'hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 dark:hover:border-[#48484a] cursor-pointer transition-all duration-200 ease-out active:scale-[0.98]'
+    ? 'hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20 hover:border-slate-300/80 dark:hover:border-white/10 cursor-pointer transition-all duration-200 ease-out active:scale-[0.98]'
     : '';
-  const paddingStyles = padding ? 'p-3 sm:p-6' : '';
+  const paddingStyles = padding ? 'p-4 sm:p-6' : '';
 
   return (
     <div
