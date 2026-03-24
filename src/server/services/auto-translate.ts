@@ -4,8 +4,10 @@
  */
 
 import { LLMClient } from '../llm/llm-client.js';
+import { createLLMClientForConfig } from '../llm/providers.js';
 import { getProviderConfig } from '../types/provider.js';
 import type { LLMProvider } from '../types/provider.js';
+import type { ProxySettings } from '../types/index.js';
 import * as dal from '../db/dal.js';
 import { getDb } from '../db/database.js';
 import { logger } from '../utils/logger.js';
@@ -17,18 +19,38 @@ interface TranslateLLMSettings {
   model: string;
 }
 
-function getTranslateClient(): LLMClient | null {
-  const config = dal.getSetting<TranslateLLMSettings>('translate_llm');
-  if (!config || !config.apiKey || !config.model) return null;
+function getProxyHeaders(): Record<string, string> {
+  const ps = dal.getSetting<ProxySettings>('proxy_settings');
+  if (!ps?.serviceId) return {};
+  const headers: Record<string, string> = { 'x-service-id': ps.serviceId };
+  if (ps.deptName) headers['x-dept-name'] = ps.deptName;
+  return headers;
+}
 
-  const providerConfig = getProviderConfig(config.provider || 'other');
-  return new LLMClient({
-    baseUrl: config.baseUrl || providerConfig.defaultBaseUrl,
-    apiKey: config.apiKey,
-    model: config.model,
-    provider: (config.provider || 'other') as LLMProvider,
-    providerConfig,
-  });
+function getTranslateClient(): LLMClient | null {
+  // 1) translate_llm 설정이 있으면 그걸 사용
+  const config = dal.getSetting<TranslateLLMSettings>('translate_llm');
+  if (config?.model) {
+    const providerConfig = getProviderConfig(config.provider || 'other');
+    return new LLMClient({
+      baseUrl: config.baseUrl || providerConfig.defaultBaseUrl,
+      apiKey: config.apiKey || '',
+      model: config.model,
+      provider: (config.provider || 'other') as LLMProvider,
+      providerConfig,
+      extraHeaders: getProxyHeaders(),
+    });
+  }
+
+  // 2) 없으면 첫 번째 활성 LLM config를 번역용으로 사용 (사내망 fallback)
+  const llmConfigs = dal.getLLMConfigs();
+  const first = llmConfigs.find(c => c.isActive) || llmConfigs[0];
+  if (first) {
+    logger.info(`Translate LLM not configured, falling back to first LLM: ${first.id}`);
+    return createLLMClientForConfig(first);
+  }
+
+  return null;
 }
 
 async function translateText(client: LLMClient, text: string): Promise<string> {
