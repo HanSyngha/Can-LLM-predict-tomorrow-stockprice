@@ -14,7 +14,7 @@ export function ProxySettingsForm() {
   const { t } = useI18n();
   const [form, setForm] = useState<ProxySettings>({
     serviceId: 'stock',
-    deptName: '',
+    deptName: 'S/W혁신팀(S.LSI)',
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);

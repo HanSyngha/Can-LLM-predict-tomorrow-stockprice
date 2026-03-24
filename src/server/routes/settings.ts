@@ -19,8 +19,16 @@ import * as dal from '../db/dal.js';
 import { LLMClient } from '../llm/llm-client.js';
 import { getProviderConfig } from '../types/provider.js';
 import type { LLMProvider } from '../types/provider.js';
-import type { LLMConfig } from '../types/index.js';
+import type { LLMConfig, ProxySettings } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+
+function getProxyHeaders(): Record<string, string> {
+  const ps = dal.getSetting<ProxySettings>('proxy_settings');
+  if (!ps?.serviceId) return {};
+  const headers: Record<string, string> = { 'x-service-id': ps.serviceId };
+  if (ps.deptName) headers['x-dept-name'] = ps.deptName;
+  return headers;
+}
 
 export async function settingRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/settings - Get all settings
@@ -85,6 +93,7 @@ export async function settingRoutes(app: FastifyInstance): Promise<void> {
       model: body.model,
       provider: body.provider as LLMProvider,
       providerConfig,
+      extraHeaders: getProxyHeaders(),
     });
 
     const result = await client.testConnection();
@@ -107,8 +116,8 @@ export async function settingRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/settings/llms', async (request, reply) => {
     const body = request.body as LLMConfig;
 
-    if (!body.id || !body.name || !body.model || !body.baseUrl || !body.apiKey) {
-      return reply.status(400).send({ error: 'Missing required fields: id, name, model, baseUrl, apiKey' });
+    if (!body.id || !body.name || !body.model || !body.baseUrl) {
+      return reply.status(400).send({ error: 'Missing required fields: id, name, model, baseUrl' });
     }
 
     try {
@@ -178,6 +187,7 @@ export async function settingRoutes(app: FastifyInstance): Promise<void> {
       model: config.model,
       provider: config.provider as LLMProvider,
       providerConfig,
+      extraHeaders: getProxyHeaders(),
     });
 
     const result = await client.testConnection();
