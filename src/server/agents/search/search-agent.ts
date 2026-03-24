@@ -11,21 +11,13 @@
 import { LLMClient } from '../../llm/llm-client.js';
 import { getProviderConfig } from '../../types/provider.js';
 import type { LLMProvider } from '../../types/provider.js';
-import type { ProxySettings } from '../../types/index.js';
 import * as dal from '../../db/dal.js';
 import { browserClient } from './browser-client.js';
 import { createBrowserTools } from './browser-tools.js';
 import { SEARCH_SYSTEM_PROMPT } from './prompts.js';
 import { SearchSubAgent } from './sub-agent.js';
+import { getProxyHeaders } from '../../utils/proxy-headers.js';
 import { logger } from '../../utils/logger.js';
-
-function getProxyHeaders(): Record<string, string> {
-  const ps = dal.getSetting<ProxySettings>('proxy_settings');
-  if (!ps?.serviceId) return {};
-  const headers: Record<string, string> = { 'x-service-id': ps.serviceId };
-  if (ps.deptName) headers['x-dept-name'] = ps.deptName;
-  return headers;
-}
 
 export interface SearchRequest {
   query: string;

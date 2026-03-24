@@ -7,9 +7,9 @@ import { LLMClient } from '../llm/llm-client.js';
 import { createLLMClientForConfig } from '../llm/providers.js';
 import { getProviderConfig } from '../types/provider.js';
 import type { LLMProvider } from '../types/provider.js';
-import type { ProxySettings } from '../types/index.js';
 import * as dal from '../db/dal.js';
 import { getDb } from '../db/database.js';
+import { getProxyHeaders } from '../utils/proxy-headers.js';
 import { logger } from '../utils/logger.js';
 
 interface TranslateLLMSettings {
@@ -17,14 +17,6 @@ interface TranslateLLMSettings {
   baseUrl: string;
   apiKey: string;
   model: string;
-}
-
-function getProxyHeaders(): Record<string, string> {
-  const ps = dal.getSetting<ProxySettings>('proxy_settings');
-  if (!ps?.serviceId) return {};
-  const headers: Record<string, string> = { 'x-service-id': ps.serviceId };
-  if (ps.deptName) headers['x-dept-name'] = ps.deptName;
-  return headers;
 }
 
 function getTranslateClient(): LLMClient | null {

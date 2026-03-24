@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useI18n } from '../../contexts/I18nContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface NavItem {
   path: string;
@@ -92,16 +93,21 @@ export function MobileNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const { user } = useAuth();
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
+  const visibleItems = navItems.filter(item =>
+    item.path !== '/settings' && item.path !== '/admin' || user?.isAdmin
+  );
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-[#0e0e10]/80 backdrop-blur-2xl border-t border-slate-200/60 dark:border-[#2a2a2c] md:hidden z-50 pb-safe">
       <div className="flex items-center justify-around h-[52px]">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const active = isActive(item.path);
           return (
             <button

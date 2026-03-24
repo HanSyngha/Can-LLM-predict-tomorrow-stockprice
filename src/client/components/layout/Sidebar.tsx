@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useI18n, type Locale } from '../../contexts/I18nContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface NavItem {
   path: string;
@@ -79,6 +80,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { resolved, toggle } = useTheme();
   const { locale, setLocale, t } = useI18n();
+  const { user, logout } = useAuth();
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -86,7 +88,7 @@ export function Sidebar() {
   };
 
   const mainItems = navItems.filter(i => i.section === 'main');
-  const systemItems = navItems.filter(i => i.section === 'system');
+  const systemItems = navItems.filter(i => i.section === 'system' && (user?.isAdmin || i.path !== '/settings' && i.path !== '/admin'));
 
   return (
     <aside className="hidden md:flex flex-col w-[220px] min-h-screen border-r border-slate-200/80 dark:border-[#2a2a2c] bg-white/50 dark:bg-[#0e0e10]/50 backdrop-blur-xl shrink-0">
@@ -187,6 +189,28 @@ export function Sidebar() {
           )}
           <span>{resolved === 'dark' ? t('theme.light') : t('theme.dark')}</span>
         </button>
+
+        {/* User info + logout */}
+        {user && (
+          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-slate-50 dark:bg-white/[0.03]">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+              {user.username?.[0]?.toUpperCase() || user.loginid[0]?.toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{user.username || user.loginid}</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-600 truncate">{user.deptname || user.loginid}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="p-1 rounded text-slate-400 hover:text-rose-500 transition-colors cursor-pointer shrink-0"
+              title="Logout"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

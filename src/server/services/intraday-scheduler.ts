@@ -185,9 +185,29 @@ async function runIntradayHourlyCycle(markets: string[]): Promise<void> {
 }
 
 /**
+ * Grade any leftover unresolved predictions on startup (e.g., after deployment).
+ */
+async function gradeLeftoversOnStartup(): Promise<void> {
+  try {
+    const generalSettings = dal.getSetting<{ intradayFlatThreshold?: number }>('general');
+    const flatThreshold = generalSettings?.intradayFlatThreshold ?? 0.15;
+    const stocks = dal.getActiveStocks();
+
+    for (const stock of stocks) {
+      await gradeIntradayPredictions(stock, '', flatThreshold);
+    }
+    logger.info('Startup: graded leftover intraday predictions');
+  } catch (error) {
+    logger.warn('Startup grading failed', error);
+  }
+}
+
+/**
  * Initialize intraday scheduler with market-specific cron jobs.
  */
 export function initIntradayScheduler(): void {
+  // Grade any leftovers from before restart
+  gradeLeftoversOnStartup().catch(() => {});
   // KR markets (KOSPI/KOSDAQ): hourly KST 08:00-15:00 = UTC 23:00-06:00
   // Cron: every hour, minutes=0, hours 23,0,1,2,3,4,5,6 UTC, weekdays only
   const krHourlyTask = cron.schedule(

@@ -24,6 +24,7 @@ import { translateRoutes } from './routes/translate.js';
 import { initScheduler } from './services/scheduler.js';
 import { initIntradayScheduler } from './services/intraday-scheduler.js';
 import { intradayRoutes } from './routes/intraday.js';
+import { authRoutes } from './routes/auth.js';
 import { logger } from './utils/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +60,7 @@ async function main() {
   }
 
   // Register API routes
+  await app.register(authRoutes);
   await app.register(stockRoutes);
   await app.register(predictionRoutes);
   await app.register(noteRoutes);
